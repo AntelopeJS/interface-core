@@ -12,7 +12,11 @@ function addToMapArray(map: Map<string, Array<any>>, key: string, value: any) {
 
 /** @internal */
 export const internal = {
-  moduleByFolder: [] as { dir: string; id: string }[],
+  moduleByFolder: [] as {
+    dir: string;
+    id: string;
+    isImplementor?: boolean;
+  }[],
   testStubMode: false,
   knownAsync: new Map<string, Array<any>>(),
   knownRegisters: new Map<string, Array<any>>(),
@@ -23,6 +27,9 @@ export const internal = {
   >,
   asyncContextReporter: undefined as
     | ((trace: NodeJS.CallSite[]) => void)
+    | undefined,
+  replayErrorReporter: undefined as
+    | ((id: unknown, err: unknown) => void)
     | undefined,
 
   addAsyncProxy(module: string, proxy: any) {
