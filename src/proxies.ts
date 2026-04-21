@@ -1,4 +1,5 @@
 import { internal } from "./internal";
+import { findResponsibleFile } from "./responsible-module";
 
 const STUB_NOT_IMPLEMENTED =
   "Interface function called without implementation in test environment. " +
@@ -112,7 +113,14 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
       }
     }
     for (const [id, { args }] of this.registered) {
-      callback(id, ...args);
+      try {
+        callback(id, ...args);
+      } catch (err) {
+        // Best-effort replay: one throwing consumer must not strand the others.
+        if (internal.replayErrorReporter) {
+          internal.replayErrorReporter(id, err);
+        }
+      }
     }
   }
 
@@ -258,44 +266,6 @@ function captureCallStack(startFrame = 0): NodeJS.CallSite[] {
   Error.prepareStackTrace = oldHandler;
   Error.stackTraceLimit = oldLimit;
   return trace.slice(startFrame);
-}
-
-interface ResponsibleModuleResult {
-  module?: string;
-  lastInterface: string;
-}
-
-function findResponsibleFile(
-  trace: NodeJS.CallSite[],
-): ResponsibleModuleResult {
-  let currentFound = "";
-  const lastInterface = "";
-  let currentBestMatch = 0;
-
-  for (const site of trace) {
-    const fileName = site.getFileName();
-    if (
-      !fileName ||
-      fileName.startsWith("node:internal/") ||
-      fileName.match(/[/\\]node_modules[/\\]/)
-    ) {
-      continue;
-    }
-    for (const { dir, id } of internal.moduleByFolder) {
-      if (fileName.startsWith(dir) && dir.length > currentBestMatch) {
-        currentFound = id;
-        currentBestMatch = dir.length;
-      }
-    }
-    if (currentFound) {
-      return { module: currentFound, lastInterface };
-    }
-    if (!site.getFunctionName() && site.getTypeName()) {
-      break;
-    }
-  }
-
-  return { lastInterface };
 }
 
 /**
