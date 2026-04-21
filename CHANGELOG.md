@@ -1,5 +1,32 @@
 # Changelog
 
+## v0.0.3
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.0.2...v0.0.3)
+
+### 🩹 Fixes
+
+- Make findResponsibleFile robust to HMR edge cases ([2bfe8da](https://github.com/AntelopeJS/interface-core/commit/2bfe8da))
+
+### 📖 Documentation
+
+- Rewrite documentation for production readiness ([73ef441](https://github.com/AntelopeJS/interface-core/commit/73ef441))
+
+### 🏡 Chore
+
+- Changelog ([b4f9bab](https://github.com/AntelopeJS/interface-core/commit/b4f9bab))
+- Stage changelog during release process ([b105a87](https://github.com/AntelopeJS/interface-core/commit/b105a87))
+- Update package.json and release config ([5c1b9eb](https://github.com/AntelopeJS/interface-core/commit/5c1b9eb))
+- Update dependencies ([0941b3c](https://github.com/AntelopeJS/interface-core/commit/0941b3c))
+
+### 🤖 CI
+
+- Add test step to CI workflow ([2836eb5](https://github.com/AntelopeJS/interface-core/commit/2836eb5))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <upd4ting@gmail.com>
+
 ## v0.0.2
 
 
