@@ -15,6 +15,7 @@ export interface ModuleSourceLocal extends ModuleSource {
   main?: string;
   watchDir?: ModuleWatchDir;
   installCommand?: ModuleInstallCommand;
+  reloadCommand?: ModuleInstallCommand;
 }
 
 export interface ModuleSourceGit extends ModuleSource {
@@ -36,6 +37,7 @@ export interface ModuleSourceLocalFolder extends ModuleSource {
   path: string;
   watchDir?: ModuleWatchDir;
   installCommand?: ModuleInstallCommand;
+  reloadCommand?: ModuleInstallCommand;
 }
 
 // Config types
