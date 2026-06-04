@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.0.4
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.0.3...v0.0.4)
+
+### 🩹 Fixes
+
+- Credit outermost implementor as responsible module ([#2](https://github.com/AntelopeJS/interface-core/pull/2))
+
+### ❤️ Contributors
+
+- Thomas ([@Thomasims](http://github.com/Thomasims))
+
 ## v0.0.3
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.0.2...v0.0.3)
