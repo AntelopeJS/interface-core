@@ -65,9 +65,7 @@ export function findResponsibleFile(
     if (!match.isImplementor) {
       return { module: match.id, lastInterface };
     }
-    if (!implementorMatch) {
-      implementorMatch = match.id;
-    }
+    implementorMatch = match.id;
   }
 
   if (implementorMatch) {
