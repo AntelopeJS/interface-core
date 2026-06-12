@@ -87,7 +87,6 @@ export function InterfaceFunction<
   return func;
 }
 
-type RegisterFunction = (id: any, ...args: any[]) => void;
 type RID<T> = T extends (id: infer P, ...args: any[]) => void ? P : never;
 
 type InterfaceImplType<T> = T extends RegisteringProxy<infer P>
