@@ -52,6 +52,9 @@
       "proxies": [
         "dist/proxies.d.ts"
       ],
+      "runtime": [
+        "dist/runtime.d.ts"
+      ],
       "internal": [
         "dist/internal.d.ts"
       ],
