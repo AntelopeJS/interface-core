@@ -12,14 +12,20 @@ interface ProxiedFunction {
   proxy: AsyncProxy;
 }
 
-function detach(func: unknown) {
-  (func as ProxiedFunction).proxy.detach();
+function drainQueuedCalls() {
+  return undefined;
+}
+
+function resetProxy(func: unknown) {
+  const proxy = (func as ProxiedFunction).proxy;
+  proxy.onCall(drainQueuedCalls, true);
+  proxy.detach();
 }
 
 describe("runtime interface", () => {
   afterEach(() => {
-    detach(GetRuntimeInfo);
-    detach(RegisterDevServer);
+    resetProxy(GetRuntimeInfo);
+    resetProxy(RegisterDevServer);
   });
 
   it("resolves GetRuntimeInfo with the implementation result", async () => {
@@ -59,5 +65,22 @@ describe("runtime interface", () => {
     ImplementInterface(runtime, { GetRuntimeInfo: () => info });
 
     expect(await pending).to.deep.equal(info);
+  });
+
+  it("replays RegisterDevServer calls queued before the implementation is attached", async () => {
+    const endpoints: DevServerEndpoint[] = [
+      { protocol: "http", host: "localhost", port: 5011 },
+    ];
+    const pending = RegisterDevServer("api", endpoints);
+
+    const received: Array<[string, DevServerEndpoint[]]> = [];
+    ImplementInterface(runtime, {
+      RegisterDevServer: (name, registered) => {
+        received.push([name, registered]);
+      },
+    });
+
+    await pending;
+    expect(received).to.deep.equal([["api", endpoints]]);
   });
 });
