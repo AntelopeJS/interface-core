@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.0.5
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.0.4...v0.0.5)
+
+### 🚀 Enhancements
+
+- **runtime:** Add GetRuntimeInfo and RegisterDevServer interface functions ([#3](https://github.com/AntelopeJS/interface-core/pull/3))
+
+### 📖 Documentation
+
+- Document reloadCommand on local module sources ([f166726](https://github.com/AntelopeJS/interface-core/commit/f166726))
+
+### 🏡 Chore
+
+- Remove unused RegisterFunction type alias ([81b3e51](https://github.com/AntelopeJS/interface-core/commit/81b3e51))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <upd4ting@gmail.com>
+- Thomasims <thomasims3@hotmail.fr>
+
 ## v0.0.4
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.0.3...v0.0.4)
