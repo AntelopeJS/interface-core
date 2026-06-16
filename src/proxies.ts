@@ -64,7 +64,11 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
    */
   public call(...args: Parameters<T>): Promise<R> {
     if (this.callback) {
-      return Promise.resolve(this.callback(...args));
+      try {
+        return Promise.resolve(this.callback(...args));
+      } catch (err) {
+        return Promise.reject(err);
+      }
     }
     if (internal.testStubMode) {
       return Promise.reject(new Error(STUB_NOT_IMPLEMENTED));
