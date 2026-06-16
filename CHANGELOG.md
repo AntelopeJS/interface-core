@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.0.6
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.0.5...v0.0.6)
+
+### 🩹 Fixes
+
+- **proxies:** Convert sync throws in AsyncProxy.call to rejections ([#4](https://github.com/AntelopeJS/interface-core/pull/4))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <upd4ting@gmail.com>
+
 ## v0.0.5
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.0.4...v0.0.5)
