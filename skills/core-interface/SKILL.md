@@ -49,6 +49,9 @@ ImplementInterface(UserInterface, {
 
 ```ts
 // consumer - call the declaration; always returns a Promise
+import { Logging } from "@antelopejs/interface-core/logging";
+import { GetUser, OnUserCreated } from "./declaration";
+
 const user = await GetUser("42");
 OnUserCreated.register((userId) => Logging.Info("created", userId));
 ```
