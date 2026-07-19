@@ -19,7 +19,7 @@ factories, `GetMetadata`, and config types are ordinary consumer-side helpers (n
 import { InterfaceFunction, ImplementInterface, GetMetadata, GetInterfaceInstances, GetInterfaceInstance, AsyncProxy, EventProxy, RegisteringProxy, GetResponsibleModule } from "@antelopejs/interface-core";
 import { MakeClassDecorator, MakeMethodDecorator, MakePropertyDecorator, MakeParameterDecorator } from "@antelopejs/interface-core/decorators"; // + many combined variants
 import { Events, ListModules, GetModuleInfo, LoadModule, StartModule, StopModule, DestroyModule, ReloadModule } from "@antelopejs/interface-core/modules";
-import { AsyncProxy, EventProxy, RegisteringProxy } from "@antelopejs/interface-core/proxies";
+import { AsyncProxy, EventProxy, RegisteringProxy } from "@antelopejs/interface-core/proxies"; // same classes the root entry re-exports; pick one import site
 import { GetRuntimeInfo, RegisterDevServer, DEV_REGISTRY_PATH } from "@antelopejs/interface-core/runtime";
 import { defineConfig, type AntelopeConfig, type AntelopeModuleConfig } from "@antelopejs/interface-core/config";
 import { Logging } from "@antelopejs/interface-core/logging";
@@ -71,7 +71,8 @@ ch.Debug("query", { ms: 12 });
 
 - `InterfaceFunction` calls always return a `Promise`, even for sync implementations. Unimplemented
   calls queue indefinitely (no timeout); an `await` before any provider attaches simply waits. In
-  `ajs module test` stub mode they reject instead with "called without implementation".
+  `ajs module test` stub mode they reject instead with "Interface function called without
+  implementation in test environment. Ensure the required module is loaded in your test config.".
 - Prefer the synchronous `ImplementInterface(decl, impl)`; the Promise-accepting overload is
   deprecated. Implementations may be partial - unmatched keys keep queuing.
 - Module attribution (`GetResponsibleModule`) works by call-stack analysis. Attach implementations
