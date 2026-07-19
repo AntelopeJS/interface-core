@@ -93,6 +93,6 @@ ch.Debug("query", { ms: 12 });
 
 ## Deeper reference
 
-See the shipped `.d.ts` files under `dist/` for exact signatures, and the repository docs at
-https://github.com/AntelopeJS/interface-core/tree/main/docs (Introduction, Proxies, Decorators,
-Metadata, Modules, Logging, Configuration, Runtime) - `docs/` is not part of the npm package.
+See the shipped `.d.ts` files under `dist/` for exact signatures, and this package's `docs/`
+chapters — Introduction, Proxies, Decorators, Metadata, Modules, Logging, Configuration,
+Runtime — for the prose guides. Do not duplicate them here.
