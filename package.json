@@ -16,7 +16,9 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "docs",
+    "skills"
   ],
   "exports": {
     ".": {
@@ -79,7 +81,10 @@
     "test": "pnpm run build && ajs module test ."
   },
   "antelopeJs": {
-    "test": "src/antelope.test.ts"
+    "test": "src/antelope.test.ts",
+    "skills": [
+      "./skills"
+    ]
   },
   "dependencies": {
     "reflect-metadata": "^0.2.2"
