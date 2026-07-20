@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.0.7
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.0.6...v0.0.7)
+
+### 🚀 Enhancements
+
+- **skills:** Ship a consumer skill with the package ([#5](https://github.com/AntelopeJS/interface-core/pull/5))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <upd4ting@gmail.com>
+
 ## v0.0.6
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.0.5...v0.0.6)
