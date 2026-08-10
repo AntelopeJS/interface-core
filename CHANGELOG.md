@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.0.8
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.0.7...v0.0.8)
+
+### 🚀 Enhancements
+
+- **errors:** Export typed MissingProviderError for proxy calls without a provider ([#7](https://github.com/AntelopeJS/interface-core/pull/7))
+
+### ❤️ Contributors
+
+- Fabrice Cst <fabrice@altab.be>
+
 ## v0.0.7
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.0.6...v0.0.7)
