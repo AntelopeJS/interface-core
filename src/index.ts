@@ -9,6 +9,7 @@ import {
   RegisteringProxy,
 } from "./proxies";
 
+export * from "./errors";
 export {
   AsyncProxy,
   EventProxy,

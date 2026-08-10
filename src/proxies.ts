@@ -1,9 +1,6 @@
+import { MissingProviderError } from "./errors";
 import { internal } from "./internal";
 import { findResponsibleFile } from "./responsible-module";
-
-const STUB_NOT_IMPLEMENTED =
-  "Interface function called without implementation in test environment. " +
-  "Ensure the required module is loaded in your test config.";
 
 type Func<A extends any[] = any[], R = any> = (...args: A) => R;
 
@@ -71,7 +68,7 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
       }
     }
     if (internal.testStubMode) {
-      return Promise.reject(new Error(STUB_NOT_IMPLEMENTED));
+      return Promise.reject(new MissingProviderError());
     }
     return new Promise<R>((resolve, reject) =>
       this.queue.push({ args, resolve, reject }),
@@ -157,7 +154,7 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
    */
   public register(id: RID<T>, ...args: RArgs<T>) {
     if (!this.registerCallback && internal.testStubMode) {
-      throw new Error(STUB_NOT_IMPLEMENTED);
+      throw new MissingProviderError();
     }
     const module = GetResponsibleModule();
     this.registered.set(id, { module, args });

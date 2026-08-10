@@ -1,5 +1,12 @@
+import { runInNewContext } from "node:vm";
 import { expect } from "chai";
-import { AsyncProxy, RegisteringProxy } from "..";
+import {
+  AsyncProxy,
+  isMissingProviderError,
+  MISSING_PROVIDER_CODE,
+  MissingProviderError,
+  RegisteringProxy,
+} from "..";
 import { internal } from "../internal";
 
 describe("test stub mode", () => {
@@ -19,7 +26,10 @@ describe("test stub mode", () => {
         thrown = error;
       }
 
-      expect(thrown).to.be.instanceOf(Error);
+      expect(thrown).to.be.instanceOf(MissingProviderError);
+      expect((thrown as MissingProviderError).code).to.equal(
+        MISSING_PROVIDER_CODE,
+      );
       expect((thrown as Error).message).to.include("without implementation");
     });
 
@@ -40,11 +50,21 @@ describe("test stub mode", () => {
   });
 
   describe("RegisteringProxy", () => {
-    it("throws when registering without callback in stub mode", () => {
+    it("throws MissingProviderError when registering without callback in stub mode", () => {
       internal.testStubMode = true;
       const proxy = new RegisteringProxy<(id: string) => void>();
 
-      expect(() => proxy.register("id1")).to.throw("without implementation");
+      let thrown: unknown;
+      try {
+        proxy.register("id1");
+      } catch (error) {
+        thrown = error;
+      }
+
+      expect(thrown).to.be.instanceOf(MissingProviderError);
+      expect((thrown as MissingProviderError).code).to.equal(
+        MISSING_PROVIDER_CODE,
+      );
     });
 
     it("still queues registration when stub mode is off", () => {
@@ -61,6 +81,37 @@ describe("test stub mode", () => {
       proxy.register("id1");
 
       expect(registered).to.deep.equal(["id1"]);
+    });
+  });
+
+  describe("isMissingProviderError", () => {
+    it("accepts a MissingProviderError instance", () => {
+      expect(isMissingProviderError(new MissingProviderError())).to.equal(true);
+    });
+
+    it("accepts an error carrying the code from a duplicated package copy", () => {
+      const foreignCopy = Object.assign(new Error("other wording"), {
+        code: MISSING_PROVIDER_CODE,
+      });
+      expect(isMissingProviderError(foreignCopy)).to.equal(true);
+    });
+
+    it("accepts an error carrying the code from another realm", () => {
+      const foreignRealmError = runInNewContext(
+        "Object.assign(new Error('other realm'), { code })",
+        { code: MISSING_PROVIDER_CODE },
+      ) as Error;
+
+      expect(foreignRealmError instanceof Error).to.equal(false);
+      expect(isMissingProviderError(foreignRealmError)).to.equal(true);
+    });
+
+    it("rejects unrelated errors and non-errors", () => {
+      expect(isMissingProviderError(new Error("boom"))).to.equal(false);
+      expect(isMissingProviderError({ code: MISSING_PROVIDER_CODE })).to.equal(
+        false,
+      );
+      expect(isMissingProviderError(undefined)).to.equal(false);
     });
   });
 });
