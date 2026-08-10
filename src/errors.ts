@@ -22,6 +22,21 @@ export class MissingProviderError extends Error {
 }
 
 /**
+ * Whether the value is an error, including one built in another realm.
+ *
+ * `instanceof Error` is realm-bound: an error crossing a vm context, worker or
+ * iframe boundary carries a different `Error.prototype` and fails it. The brand
+ * check holds across realms while still rejecting plain objects; `instanceof`
+ * covers the reverse case of an object created from `Error.prototype`.
+ */
+function isError(value: unknown): value is Error {
+  return (
+    Object.prototype.toString.call(value) === "[object Error]" ||
+    value instanceof Error
+  );
+}
+
+/**
  * Type guard for {@link MissingProviderError}.
  *
  * Checks the stable `code` property instead of `instanceof`, so detection
@@ -31,7 +46,7 @@ export function isMissingProviderError(
   error: unknown,
 ): error is MissingProviderError {
   return (
-    error instanceof Error &&
+    isError(error) &&
     (error as MissingProviderError).code === MISSING_PROVIDER_CODE
   );
 }

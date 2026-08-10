@@ -1,3 +1,4 @@
+import { runInNewContext } from "node:vm";
 import { expect } from "chai";
 import {
   AsyncProxy,
@@ -93,6 +94,16 @@ describe("test stub mode", () => {
         code: MISSING_PROVIDER_CODE,
       });
       expect(isMissingProviderError(foreignCopy)).to.equal(true);
+    });
+
+    it("accepts an error carrying the code from another realm", () => {
+      const foreignRealmError = runInNewContext(
+        "Object.assign(new Error('other realm'), { code })",
+        { code: MISSING_PROVIDER_CODE },
+      ) as Error;
+
+      expect(foreignRealmError instanceof Error).to.equal(false);
+      expect(isMissingProviderError(foreignRealmError)).to.equal(true);
     });
 
     it("rejects unrelated errors and non-errors", () => {
