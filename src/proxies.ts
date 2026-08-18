@@ -1,8 +1,27 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { MissingProviderError } from "./errors";
 import { internal } from "./internal";
 import { findResponsibleFile } from "./responsible-module";
 
 type Func<A extends any[] = any[], R = any> = (...args: A) => R;
+const responsibleModuleContext = new AsyncLocalStorage<string>();
+
+/**
+ * Runs work with an explicit responsible module.
+ *
+ * The module remains available to nested synchronous and asynchronous work.
+ * Calls outside this context continue to use stack-based module resolution.
+ *
+ * @param module Module ID responsible for the work
+ * @param callback Work to run in the module context
+ * @returns The callback result
+ */
+export function RunWithResponsibleModule<T>(
+  module: string,
+  callback: () => T,
+): T {
+  return responsibleModuleContext.run(module, callback);
+}
 
 /**
  * Proxy for an asynchronous function.
@@ -279,6 +298,10 @@ function captureCallStack(startFrame = 0): NodeJS.CallSite[] {
  * @returns The module ID or undefined if no module is found
  */
 export function GetResponsibleModule(startFrame = 0): string | undefined {
+  const explicitModule = responsibleModuleContext.getStore();
+  if (explicitModule !== undefined) {
+    return explicitModule;
+  }
   const trace = captureCallStack(startFrame);
   const responsible = findResponsibleFile(trace);
   if (responsible.module) {
