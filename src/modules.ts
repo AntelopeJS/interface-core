@@ -1,5 +1,27 @@
 import { EventProxy, InterfaceFunction } from ".";
-import { internal } from "./internal";
+import {
+  internal,
+  type ModuleExecutionContext,
+  type RuntimeCleanup,
+} from "./internal";
+
+/** Runs work with module ownership and an optional provider route across awaits. */
+export function RunWithModuleContext<T>(
+  context: ModuleExecutionContext,
+  callback: () => T,
+): T {
+  if (!context.module) {
+    throw new Error("Module execution context requires a module ID.");
+  }
+  return internal.executionContext.run(context, callback);
+}
+
+/** Returns the active module execution context, if one exists. */
+export function GetModuleContext(): ModuleExecutionContext | undefined {
+  return internal.executionContext.getStore();
+}
+
+export type { ModuleExecutionContext } from "./internal";
 
 /**
  * Contains events related to module lifecycle management.
@@ -16,7 +38,9 @@ export namespace Events {
    *
    * @param module Module ID
    */
-  export const ModuleConstructed = new EventProxy<(module: string) => void>();
+  export const ModuleConstructed = new EventProxy<(module: string) => void>(
+    "modules.ModuleConstructed",
+  );
 
   /**
    * Event triggers when a module is started.
@@ -26,7 +50,9 @@ export namespace Events {
    *
    * @param module Module ID
    */
-  export const ModuleStarted = new EventProxy<(module: string) => void>();
+  export const ModuleStarted = new EventProxy<(module: string) => void>(
+    "modules.ModuleStarted",
+  );
 
   /**
    * Event triggers when a module is stopped.
@@ -36,7 +62,9 @@ export namespace Events {
    *
    * @param module Module ID
    */
-  export const ModuleStopped = new EventProxy<(module: string) => void>();
+  export const ModuleStopped = new EventProxy<(module: string) => void>(
+    "modules.ModuleStopped",
+  );
 
   /**
    * Event triggers when a module is destroyed.
@@ -46,30 +74,55 @@ export namespace Events {
    *
    * @param module Module ID
    */
-  export const ModuleDestroyed = new EventProxy<(module: string) => void>();
+  export const ModuleDestroyed = new EventProxy<(module: string) => void>(
+    "modules.ModuleDestroyed",
+  );
 }
 
-// Using the Events namespace from modules.ts instead of the lowercase events
+function runCleanup(
+  cleanup: RuntimeCleanup | { detach(): void },
+  module: string,
+  operation: string,
+) {
+  try {
+    if ("cleanup" in cleanup) {
+      cleanup.cleanup();
+    } else {
+      cleanup.detach();
+    }
+  } catch (error) {
+    internal.runtimeErrorReporter?.(error, { operation, module });
+  }
+}
+
 Events.ModuleDestroyed.register((module) => {
-  if (internal.knownAsync.has(module)) {
-    for (const proxy of internal.knownAsync.get(module) ?? []) {
-      proxy.detach();
-    }
-    internal.knownAsync.delete(module);
+  for (const cleanup of internal.knownAsync.get(module) ?? []) {
+    runCleanup(cleanup, module, "detach-async-provider");
   }
-  if (internal.knownRegisters.has(module)) {
-    for (const proxy of internal.knownRegisters.get(module) ?? []) {
-      proxy.detach();
-    }
-    internal.knownRegisters.delete(module);
+  internal.knownAsync.delete(module);
+  for (const cleanup of internal.knownRegisters.get(module) ?? []) {
+    runCleanup(cleanup, module, "detach-registering-provider");
   }
-  for (const [, proxies] of internal.knownRegisters) {
-    for (const proxy of proxies) {
+  internal.knownRegisters.delete(module);
+  for (const proxy of internal.registeringProxies) {
+    try {
       proxy.unregisterModule(module);
+    } catch (error) {
+      internal.runtimeErrorReporter?.(error, {
+        operation: "unregister-module",
+        module,
+      });
     }
   }
   for (const proxy of internal.knownEvents) {
-    proxy.unregisterModule(module);
+    try {
+      proxy.unregisterModule(module);
+    } catch (error) {
+      internal.runtimeErrorReporter?.(error, {
+        operation: "unregister-event-module",
+        module,
+      });
+    }
   }
 });
 
@@ -134,7 +187,9 @@ export type ModuleInfo = Required<ModuleDefinition> & {
  *
  * @returns Array of module IDs
  */
-export const ListModules = InterfaceFunction<() => string[]>();
+export const ListModules = InterfaceFunction<() => string[]>(
+  "modules.ListModules",
+);
 
 /**
  * Retrieve the configuration and status information of a loaded module.
@@ -145,8 +200,9 @@ export const ListModules = InterfaceFunction<() => string[]>();
  * @param module The module ID to get information for
  * @returns Complete module information object
  */
-export const GetModuleInfo =
-  InterfaceFunction<(module: string) => ModuleInfo>();
+export const GetModuleInfo = InterfaceFunction<(module: string) => ModuleInfo>(
+  "modules.GetModuleInfo",
+);
 
 /**
  * Load a new module with the given ID and configuration.
@@ -165,7 +221,7 @@ export const LoadModule =
       configuration: ModuleDefinition,
       autostart?: boolean,
     ) => string[]
-  >();
+  >("modules.LoadModule");
 
 /**
  * Start a loaded but inactive module.
@@ -176,7 +232,9 @@ export const LoadModule =
  * @param module The module ID to start
  * @throws Error if the module is not loaded or cannot be started
  */
-export const StartModule = InterfaceFunction<(module: string) => void>();
+export const StartModule = InterfaceFunction<(module: string) => void>(
+  "modules.StartModule",
+);
 
 /**
  * Stop an active module.
@@ -187,7 +245,8 @@ export const StartModule = InterfaceFunction<(module: string) => void>();
  * @param module The module ID to stop
  * @throws Error if the module is not loaded or cannot be stopped
  */
-export const StopModule = InterfaceFunction<(module: string) => void>();
+export const StopModule =
+  InterfaceFunction<(module: string) => void>("modules.StopModule");
 
 /**
  * Destroy a stopped module.
@@ -198,7 +257,9 @@ export const StopModule = InterfaceFunction<(module: string) => void>();
  * @param module The module ID to destroy
  * @throws Error if the module is active or not loaded
  */
-export const DestroyModule = InterfaceFunction<(module: string) => void>();
+export const DestroyModule = InterfaceFunction<(module: string) => void>(
+  "modules.DestroyModule",
+);
 
 /**
  * Unload a module and retrigger its source mechanism.
@@ -210,4 +271,6 @@ export const DestroyModule = InterfaceFunction<(module: string) => void>();
  * @param module The module ID to reload
  * @throws Error if the module cannot be reloaded
  */
-export const ReloadModule = InterfaceFunction<(module: string) => void>();
+export const ReloadModule = InterfaceFunction<(module: string) => void>(
+  "modules.ReloadModule",
+);

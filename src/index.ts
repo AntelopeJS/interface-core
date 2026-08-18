@@ -4,16 +4,19 @@ import { internal } from "./internal";
 import { Logging } from "./logging";
 import {
   AsyncProxy,
-  EventProxy,
+  type EventProxy,
   GetResponsibleModule,
-  RegisteringProxy,
+  IsInterfaceProxy,
+  type RegisteringProxy,
 } from "./proxies";
 
 export * from "./errors";
 export {
   AsyncProxy,
   EventProxy,
+  GetInterfaceProxyIdentity,
   GetResponsibleModule,
+  IsInterfaceProxy,
   RegisteringProxy,
 } from "./proxies";
 
@@ -81,8 +84,8 @@ type Func<A extends any[] = any[], R = any> = (...args: A) => R;
 export function InterfaceFunction<
   T extends Func = Func,
   R = Awaited<ReturnType<T>>,
->(): (...args: Parameters<T>) => Promise<R> {
-  const proxy = new AsyncProxy<T, R>();
+>(identity?: string): (...args: Parameters<T>) => Promise<R> {
+  const proxy = new AsyncProxy<T, R>(identity);
   const func = (...args: Parameters<T>) => proxy.call(...args);
   func.proxy = proxy;
   return func;
@@ -92,13 +95,15 @@ type RID<T> = T extends (id: infer P, ...args: any[]) => void ? P : never;
 
 type InterfaceImplType<T> = T extends RegisteringProxy<infer P>
   ? { register: P; unregister: (id: RID<P>) => void }
-  : T extends EventProxy
-    ? never
-    : T extends (...args: infer A) => infer R
-      ? (...args: A) => Awaited<R> | R
-      : T extends Record<string, any>
-        ? InterfaceToImpl<T>
-        : never;
+  : T extends AsyncProxy<infer P>
+    ? P
+    : T extends EventProxy
+      ? never
+      : T extends (...args: infer A) => infer R
+        ? (...args: A) => Awaited<R> | R
+        : T extends Record<string, any>
+          ? InterfaceToImpl<T>
+          : never;
 
 type InterfaceToImpl<T> = T extends infer P
   ? {
@@ -106,22 +111,136 @@ type InterfaceToImpl<T> = T extends infer P
     }
   : never;
 
-function implement(decl: Record<string, any>, impl: Record<string, any>) {
-  for (const key in decl) {
-    if (key in impl) {
-      const val = decl[key];
-      if (val instanceof RegisteringProxy) {
-        val.onRegister(impl[key].register);
-        val.onUnregister(impl[key].unregister);
-      } else if (typeof val === "function" && val.proxy instanceof AsyncProxy) {
-        (<AsyncProxy>val.proxy).onCall(impl[key]);
-      } else if (val instanceof AsyncProxy) {
-        val.onCall(impl[key]);
-      } else if (!(val instanceof EventProxy)) {
-        implement(val, impl[key]);
-      }
+interface AsyncProxyProtocol {
+  onCall(callback: Func): unknown;
+}
+
+interface RegisteringProxyProtocol {
+  onHandlers(register: Func, unregister: Func): unknown;
+}
+
+interface AttachmentPlan {
+  attach(): void;
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function assertAcyclic(value: unknown, label: string) {
+  const visited = new WeakSet<object>();
+  const active = new WeakSet<object>();
+
+  const visit = (current: unknown, path: string) => {
+    if (!isObject(current) || visited.has(current)) {
+      return;
+    }
+    if (active.has(current)) {
+      throw new TypeError(`${label} contains a cycle at ${path}.`);
+    }
+    active.add(current);
+    for (const [key, child] of Object.entries(current)) {
+      visit(child, `${path}.${key}`);
+    }
+    active.delete(current);
+    visited.add(current);
+  };
+
+  visit(value, label);
+}
+
+function requireFunction(value: unknown, path: string): Func {
+  if (typeof value !== "function") {
+    throw new TypeError(`Missing or malformed interface handler at ${path}.`);
+  }
+  return value as Func;
+}
+
+function planProxyAttachment(
+  proxy: unknown,
+  implementation: unknown,
+  path: string,
+): AttachmentPlan | undefined {
+  if (IsInterfaceProxy(proxy, "event")) {
+    return;
+  }
+  if (IsInterfaceProxy(proxy, "async")) {
+    const callback = requireFunction(implementation, path);
+    return {
+      attach: () => (proxy as AsyncProxyProtocol).onCall(callback),
+    };
+  }
+  if (!IsInterfaceProxy(proxy, "registering")) {
+    return;
+  }
+  if (!isObject(implementation)) {
+    throw new TypeError(`Missing or malformed interface handler at ${path}.`);
+  }
+  const register = requireFunction(implementation.register, `${path}.register`);
+  const unregister = requireFunction(
+    implementation.unregister,
+    `${path}.unregister`,
+  );
+  return {
+    attach: () =>
+      (proxy as RegisteringProxyProtocol).onHandlers(register, unregister),
+  };
+}
+
+function createAttachmentPlan(
+  declaration: Record<string, unknown>,
+  implementation: Record<string, unknown>,
+  path = "implementation",
+): AttachmentPlan[] {
+  const plans: AttachmentPlan[] = [];
+  for (const [key, declared] of Object.entries(declaration)) {
+    const implemented = implementation[key];
+    const proxy =
+      typeof declared === "function" && "proxy" in declared
+        ? (declared as Func & { proxy?: unknown }).proxy
+        : declared;
+    const proxyPlan = planProxyAttachment(proxy, implemented, `${path}.${key}`);
+    if (proxyPlan) {
+      plans.push(proxyPlan);
+      continue;
+    }
+    if (isObject(declared) && !IsInterfaceProxy(declared)) {
+      const nestedImplementation = isObject(implemented) ? implemented : {};
+      plans.push(
+        ...createAttachmentPlan(
+          declared,
+          nestedImplementation,
+          `${path}.${key}`,
+        ),
+      );
     }
   }
+  return plans;
+}
+
+function attachImplementation(
+  declaration: Record<string, unknown>,
+  implementation: Record<string, unknown>,
+) {
+  if (!isObject(declaration) || !isObject(implementation)) {
+    throw new TypeError(
+      "Interface declaration and implementation must be objects.",
+    );
+  }
+  assertAcyclic(declaration, "declaration");
+  assertAcyclic(implementation, "implementation");
+  const plans = createAttachmentPlan(declaration, implementation);
+  plans.forEach((plan) => {
+    plan.attach();
+  });
+}
+
+function isThenable(value: unknown): value is PromiseLike<unknown> {
+  return (
+    (typeof value === "object" || typeof value === "function") &&
+    value !== null &&
+    typeof (value as PromiseLike<unknown>).then === "function"
+  );
 }
 
 /**
@@ -146,28 +265,28 @@ export function ImplementInterface<
   T extends Record<string, unknown>,
   T2 extends InterfaceToImpl<T>,
 >(
-  declaration: T | Promise<T>,
-  implementation: T2 | Promise<T2>,
+  declaration: T | PromiseLike<T>,
+  implementation: T2 | PromiseLike<T2>,
 ): Promise<{ declaration: Awaited<T>; implementation: T2 }>;
 
 export function ImplementInterface<
   T extends Record<string, any>,
   T2 extends Record<string, any>,
 >(
-  declaration: T | Promise<T>,
-  implementation: T2 | Promise<T2>,
+  declaration: T | PromiseLike<T>,
+  implementation: T2 | PromiseLike<T2>,
 ):
   | { declaration: T; implementation: T2 }
   | Promise<{ declaration: T; implementation: T2 }> {
-  if (declaration instanceof Promise || implementation instanceof Promise) {
+  if (isThenable(declaration) || isThenable(implementation)) {
     return Promise.all([declaration, implementation]).then(([decl, impl]) => {
-      implement(decl, impl);
+      attachImplementation(decl, impl);
       return { declaration: decl, implementation: impl as T2 };
     });
   }
   const decl = declaration;
   const impl = implementation as Record<string, any>;
-  implement(decl, impl);
+  attachImplementation(decl, impl);
   return { declaration: decl, implementation: impl as T2 };
 }
 
@@ -189,8 +308,7 @@ export function GetInterfaceInstances(
 ): InterfaceConnection[] {
   const module = GetResponsibleModule();
   if (!module || !(module in internal.interfaceConnections)) return [];
-  const connections = internal.interfaceConnections[module];
-  return connections[interfaceID] ?? [];
+  return internal.interfaceConnections[module][interfaceID] ?? [];
 }
 
 /**

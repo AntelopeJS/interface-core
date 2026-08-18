@@ -34,7 +34,10 @@ describe("runtime interface", () => {
       projectPath: "/tmp/project",
       env: "default",
     };
-    ImplementInterface(runtime, { GetRuntimeInfo: () => info });
+    ImplementInterface(runtime, {
+      GetRuntimeInfo: () => info,
+      RegisterDevServer: () => undefined,
+    });
 
     expect(await GetRuntimeInfo()).to.deep.equal(info);
   });
@@ -42,6 +45,11 @@ describe("runtime interface", () => {
   it("passes name and endpoints to the RegisterDevServer implementation", async () => {
     const received: Array<[string, DevServerEndpoint[]]> = [];
     ImplementInterface(runtime, {
+      GetRuntimeInfo: () => ({
+        dev: false,
+        projectPath: "/tmp/project",
+        env: "test",
+      }),
       RegisterDevServer: (name, endpoints) => {
         received.push([name, endpoints]);
       },
@@ -62,7 +70,10 @@ describe("runtime interface", () => {
       projectPath: "/tmp/project",
       env: "production",
     };
-    ImplementInterface(runtime, { GetRuntimeInfo: () => info });
+    ImplementInterface(runtime, {
+      GetRuntimeInfo: () => info,
+      RegisterDevServer: () => undefined,
+    });
 
     expect(await pending).to.deep.equal(info);
   });
@@ -75,6 +86,11 @@ describe("runtime interface", () => {
 
     const received: Array<[string, DevServerEndpoint[]]> = [];
     ImplementInterface(runtime, {
+      GetRuntimeInfo: () => ({
+        dev: false,
+        projectPath: "/tmp/project",
+        env: "test",
+      }),
       RegisterDevServer: (name, registered) => {
         received.push([name, registered]);
       },
