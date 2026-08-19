@@ -54,13 +54,19 @@ interface AsyncProxyState<T extends Func, R> {
   queue: Array<PendingCall<T, R>>;
 }
 
-interface RegisterCallbacks<T extends RegisterFunction> {
-  generation: number;
-  owner: string;
-  provider: string;
+interface RegisterAttachment<T extends Func> extends Attachment<T> {
   manualDetach: boolean;
-  register?: T;
-  unregister?: (id: RID<T>) => void;
+}
+
+interface RegisterCallbacks<T extends RegisterFunction> {
+  provider: string;
+  register?: RegisterAttachment<T>;
+  unregister?: RegisterAttachment<(id: RID<T>) => void>;
+}
+
+interface AttachmentOptions {
+  route: AttachmentRoute;
+  manualDetach: boolean;
 }
 
 interface RegisteredEntry<T extends RegisterFunction> {
@@ -210,6 +216,16 @@ function reportRuntimeError(
   });
 }
 
+function matchesLease(
+  attachment: Attachment<unknown> | undefined,
+  lease: AttachmentLease,
+) {
+  return (
+    attachment?.generation === lease.generation &&
+    attachment.owner === lease.owner
+  );
+}
+
 /** @internal */
 export function InvalidateResponsibleModule(module: string): void {
   invalidateModuleContext(module);
@@ -340,15 +356,10 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
   /** Attaches a register callback. */
   public onRegister(callback: T, manualDetach?: boolean): AttachmentLease {
     const route = getAttachmentRoute(manualDetach);
-    const current = this.state.callbacks.get(route.provider);
-    const unregister =
-      current?.owner === route.owner ? current.unregister : undefined;
-    return this.attachHandlers(
+    return this.attachRegister(
       bindProviderCallback(callback),
-      unregister,
-      manualDetach,
-      true,
       route,
+      Boolean(manualDetach),
     );
   }
 
@@ -362,18 +373,18 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
       requested,
     );
     const contextOwner = context?.owner ?? context?.module;
-    const canExtendCurrent =
-      current && (!contextOwner || current.owner === contextOwner);
-    const route = canExtendCurrent
-      ? { owner: current.owner, provider: current.provider }
-      : getAttachmentRoute();
-    return this.attachHandlers(
-      canExtendCurrent ? current.register : undefined,
-      bindProviderCallback(callback),
-      canExtendCurrent ? current.manualDetach : undefined,
-      false,
-      route,
-    );
+    const attachments = [current?.unregister, current?.register];
+    const sibling = contextOwner
+      ? attachments.find((attachment) => attachment?.owner === contextOwner)
+      : attachments.find((attachment) => Boolean(attachment));
+    const canExtendCurrent = current && sibling;
+    const options: AttachmentOptions = canExtendCurrent
+      ? {
+          route: { owner: sibling.owner, provider: current.provider },
+          manualDetach: sibling.manualDetach,
+        }
+      : { route: getAttachmentRoute(), manualDetach: false };
+    return this.attachUnregister(bindProviderCallback(callback), options);
   }
 
   /** Atomically attaches both registration handlers. */
@@ -382,11 +393,18 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
     unregister: (id: RID<T>) => void,
     manualDetach?: boolean,
   ): AttachmentLease {
-    return this.attachHandlers(
-      bindProviderCallback(register),
-      bindProviderCallback(unregister),
-      manualDetach,
-    );
+    const route = getAttachmentRoute(manualDetach);
+    const lease = this.createLease(route);
+    const boundRegister = bindProviderCallback(register);
+    const boundUnregister = bindProviderCallback(unregister);
+    this.state.callbacks.set(route.provider, {
+      provider: route.provider,
+      register: this.createAttachment(boundRegister, lease, manualDetach),
+      unregister: this.createAttachment(boundUnregister, lease, manualDetach),
+    });
+    this.trackAttachment(lease, Boolean(manualDetach));
+    this.replayRegistrations(route.provider, boundRegister);
+    return lease;
   }
 
   /** Detaches one leased provider, or every provider when called without a lease. */
@@ -396,10 +414,16 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
       return;
     }
     const current = this.state.callbacks.get(lease.provider);
-    if (
-      current?.generation === lease.generation &&
-      current.owner === lease.owner
-    ) {
+    if (!current) {
+      return;
+    }
+    if (matchesLease(current.register, lease)) {
+      current.register = undefined;
+    }
+    if (matchesLease(current.unregister, lease)) {
+      current.unregister = undefined;
+    }
+    if (!current.register && !current.unregister) {
       this.state.callbacks.delete(lease.provider);
     }
   }
@@ -431,7 +455,7 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
       provider: requested ?? callback?.provider,
       args,
     });
-    callback?.register?.(id, ...args);
+    callback?.register?.callback(id, ...args);
   }
 
   /** Unregisters an entry from the provider that accepted it. */
@@ -446,7 +470,7 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
       entry.provider,
     );
     try {
-      callback?.unregister?.(id);
+      callback?.unregister?.callback(id);
     } finally {
       this.state.registered.delete(id);
     }
@@ -486,31 +510,58 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
     }
   }
 
-  private attachHandlers(
-    register?: T,
-    unregister?: (id: RID<T>) => void,
-    manualDetach?: boolean,
-    shouldReplay = true,
-    attachmentRoute?: AttachmentRoute,
+  private attachRegister(
+    callback: T,
+    route: AttachmentRoute,
+    manualDetach: boolean,
   ): AttachmentLease {
-    const route = attachmentRoute ?? getAttachmentRoute(manualDetach);
-    const lease = { ...route, generation: internal.nextLeaseGeneration++ };
+    const lease = this.createLease(route);
+    const current = this.state.callbacks.get(route.provider);
     this.state.callbacks.set(route.provider, {
-      register,
-      unregister,
-      manualDetach: Boolean(manualDetach),
-      ...lease,
+      provider: route.provider,
+      register: this.createAttachment(callback, lease, manualDetach),
+      unregister: current?.unregister,
     });
+    this.trackAttachment(lease, manualDetach);
+    this.replayRegistrations(route.provider, callback);
+    return lease;
+  }
+
+  private attachUnregister(
+    callback: (id: RID<T>) => void,
+    options: AttachmentOptions,
+  ): AttachmentLease {
+    const { route, manualDetach } = options;
+    const lease = this.createLease(route);
+    const current = this.state.callbacks.get(route.provider);
+    this.state.callbacks.set(route.provider, {
+      provider: route.provider,
+      register: current?.register,
+      unregister: this.createAttachment(callback, lease, manualDetach),
+    });
+    this.trackAttachment(lease, manualDetach);
+    return lease;
+  }
+
+  private trackAttachment(lease: AttachmentLease, manualDetach: boolean) {
     if (!manualDetach) {
-      internal.addRegisteringProxy(route.owner, {
+      internal.addRegisteringProxy(lease.owner, {
         cleanup: () => this.detach(lease),
         unregisterModule: (module: string) => this.unregisterModule(module),
       });
     }
-    if (register && shouldReplay) {
-      this.replayRegistrations(route.provider, register);
-    }
-    return lease;
+  }
+
+  private createLease(route: AttachmentRoute): AttachmentLease {
+    return { ...route, generation: internal.nextLeaseGeneration++ };
+  }
+
+  private createAttachment<F extends Func>(
+    callback: F,
+    lease: AttachmentLease,
+    manualDetach?: boolean,
+  ): RegisterAttachment<F> {
+    return { callback, ...lease, manualDetach: Boolean(manualDetach) };
   }
 
   private replayRegistrations(provider: string, callback: T) {

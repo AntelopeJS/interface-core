@@ -99,6 +99,8 @@ describe("generation-owned cleanup", () => {
     );
     proxy.register("item");
 
+    expect(calls).to.deep.equal(["old-register:item"]);
+
     RunWithModuleContext(
       { module: "shared", owner: "split#old", provider: "shared" },
       () => {
@@ -108,7 +110,7 @@ describe("generation-owned cleanup", () => {
     );
     proxy.unregister("item");
 
-    expect(calls).to.deep.equal(["new-unregister:item"]);
+    expect(calls).to.deep.equal(["old-register:item", "new-unregister:item"]);
     expect(internal.knownRegisters.has("split#old")).to.equal(false);
     expect(internal.knownRegisters.has("split#new")).to.equal(true);
 
@@ -123,6 +125,56 @@ describe("generation-owned cleanup", () => {
 
     expect(() => proxy.register("detached")).to.throw();
     expect(internal.knownRegisters.has("split#new")).to.equal(false);
+  });
+
+  it("keeps reverse split handlers until their owner is destroyed", () => {
+    const proxy = new RegisteringProxy<(id: string) => void>(
+      "generation.reverse-split-registering",
+    );
+    const calls: string[] = [];
+    RunWithModuleContext(
+      { module: "shared", owner: "reverse#old", provider: "shared" },
+      () => proxy.onUnregister((id) => calls.push(`old-unregister:${id}`)),
+    );
+    RunWithModuleContext(
+      { module: "shared", owner: "reverse#new", provider: "shared" },
+      () => proxy.onRegister((id) => calls.push(`new-register:${id}`)),
+    );
+    proxy.register("active");
+    proxy.unregister("active");
+    proxy.register("survivor");
+
+    expect(calls).to.deep.equal([
+      "new-register:active",
+      "old-unregister:active",
+      "new-register:survivor",
+    ]);
+
+    RunWithModuleContext(
+      { module: "shared", owner: "reverse#old", provider: "shared" },
+      () => {
+        Events.ModuleDestroyed.emit("shared");
+        Events.ModuleDestroyed.emit("shared");
+      },
+    );
+    proxy.unregister("survivor");
+    proxy.register("replacement");
+
+    expect(calls.at(-1)).to.equal("new-register:replacement");
+    expect(internal.knownRegisters.has("reverse#old")).to.equal(false);
+    expect(internal.knownRegisters.has("reverse#new")).to.equal(true);
+
+    RunWithModuleContext(
+      { module: "shared", owner: "reverse#new", provider: "shared" },
+      () => {
+        Events.ModuleDestroyed.emit("shared");
+        Events.ModuleDestroyed.emit("shared");
+      },
+    );
+    internal.testStubMode = true;
+
+    expect(() => proxy.register("detached")).to.throw();
+    expect(internal.knownRegisters.has("reverse#new")).to.equal(false);
   });
 
   it("cleans only registrations and events from the destroyed owner", () => {
