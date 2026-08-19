@@ -32,6 +32,11 @@ export interface AttachmentLease {
   provider: string;
 }
 
+interface AttachmentRoute {
+  owner: string;
+  provider: string;
+}
+
 interface PendingCall<T extends Func, R> {
   args: Parameters<T>;
   provider?: string;
@@ -285,20 +290,35 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
 
   /** Attaches a register callback. */
   public onRegister(callback: T, manualDetach?: boolean): AttachmentLease {
-    const route = getAttachmentRoute();
+    const route = getAttachmentRoute(manualDetach);
     const current = this.state.callbacks.get(route.provider);
-    return this.attachHandlers(callback, current?.unregister, manualDetach);
+    return this.attachHandlers(
+      callback,
+      current?.unregister,
+      manualDetach,
+      true,
+      route,
+    );
   }
 
   /** Attaches an unregister callback to the current provider route. */
   public onUnregister(callback: (id: RID<T>) => void): AttachmentLease {
-    const route = getAttachmentRoute();
-    const current = this.state.callbacks.get(route.provider);
+    const context = internal.executionContext.getStore();
+    const requested = context?.provider ?? context?.module;
+    const current = selectProvider(
+      this.state.callbacks,
+      this[PROXY_BRAND].identity,
+      requested,
+    );
+    const route = current
+      ? { owner: current.owner, provider: current.provider }
+      : getAttachmentRoute();
     return this.attachHandlers(
       current?.register,
       callback,
       current?.manualDetach,
       false,
+      route,
     );
   }
 
@@ -400,8 +420,9 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
     unregister?: (id: RID<T>) => void,
     manualDetach?: boolean,
     shouldReplay = true,
+    attachmentRoute?: AttachmentRoute,
   ): AttachmentLease {
-    const route = getAttachmentRoute(manualDetach);
+    const route = attachmentRoute ?? getAttachmentRoute(manualDetach);
     const lease = { ...route, generation: internal.nextLeaseGeneration++ };
     this.state.callbacks.set(route.provider, {
       register,
