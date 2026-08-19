@@ -1,8 +1,61 @@
-import { MissingProviderError } from "./errors";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { MissingProviderError, ModuleContextInvalidatedError } from "./errors";
 import { internal } from "./internal";
 import { findResponsibleFile } from "./responsible-module";
 
 type Func<A extends any[] = any[], R = any> = (...args: A) => R;
+
+interface ResponsibleModuleContext {
+  module: string;
+  token: symbol;
+}
+
+const responsibleModuleContext =
+  new AsyncLocalStorage<ResponsibleModuleContext>();
+const activeResponsibleModuleTokens = new Map<string, symbol>();
+
+function getResponsibleModuleToken(module: string): symbol {
+  const activeToken = activeResponsibleModuleTokens.get(module);
+  if (activeToken) {
+    return activeToken;
+  }
+  const token = Symbol(module);
+  activeResponsibleModuleTokens.set(module, token);
+  return token;
+}
+
+function assertActiveContext(context: ResponsibleModuleContext): void {
+  if (activeResponsibleModuleTokens.get(context.module) !== context.token) {
+    throw new ModuleContextInvalidatedError(context.module);
+  }
+}
+
+/** @internal */
+export function InvalidateResponsibleModule(module: string): void {
+  activeResponsibleModuleTokens.delete(module);
+}
+
+/**
+ * Runs work with an explicit responsible module.
+ *
+ * The module remains available to nested synchronous and asynchronous work.
+ * Calls outside this context continue to use stack-based module resolution.
+ *
+ * @param module Module ID responsible for the work
+ * @param callback Work to run in the module context
+ * @returns The callback result
+ */
+export function RunWithResponsibleModule<T>(
+  module: string,
+  callback: () => T,
+): T {
+  const inheritedContext = responsibleModuleContext.getStore();
+  if (inheritedContext) {
+    assertActiveContext(inheritedContext);
+  }
+  const context = { module, token: getResponsibleModuleToken(module) };
+  return responsibleModuleContext.run(context, callback);
+}
 
 /**
  * Proxy for an asynchronous function.
@@ -28,12 +81,10 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
    * @param manualDetach Don't detach automatically when module is unloaded
    */
   public onCall(callback: T, manualDetach?: boolean) {
+    const caller = manualDetach ? undefined : GetResponsibleModule();
     this.callback = callback;
-    if (!manualDetach) {
-      const caller = GetResponsibleModule();
-      if (caller) {
-        internal.addAsyncProxy(caller, this);
-      }
+    if (caller) {
+      internal.addAsyncProxy(caller, this);
     }
     if (this.queue.length > 0) {
       this.queue.forEach(({ args, resolve, reject }) => {
@@ -106,12 +157,10 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
    * @param manualDetach Don't detach automatically
    */
   public onRegister(callback: T, manualDetach?: boolean) {
+    const caller = manualDetach ? undefined : GetResponsibleModule();
     this.registerCallback = callback;
-    if (!manualDetach) {
-      const caller = GetResponsibleModule();
-      if (caller) {
-        internal.addRegisteringProxy(caller, this);
-      }
+    if (caller) {
+      internal.addRegisteringProxy(caller, this);
     }
     for (const [id, { args }] of this.registered) {
       try {
@@ -279,6 +328,11 @@ function captureCallStack(startFrame = 0): NodeJS.CallSite[] {
  * @returns The module ID or undefined if no module is found
  */
 export function GetResponsibleModule(startFrame = 0): string | undefined {
+  const explicitContext = responsibleModuleContext.getStore();
+  if (explicitContext) {
+    assertActiveContext(explicitContext);
+    return explicitContext.module;
+  }
   const trace = captureCallStack(startFrame);
   const responsible = findResponsibleFile(trace);
   if (responsible.module) {

@@ -15,6 +15,7 @@ export {
   EventProxy,
   GetResponsibleModule,
   RegisteringProxy,
+  RunWithResponsibleModule,
 } from "./proxies";
 
 internal.asyncContextReporter = (trace: NodeJS.CallSite[]) => {

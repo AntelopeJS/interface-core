@@ -1,5 +1,6 @@
 import { EventProxy, InterfaceFunction } from ".";
 import { internal } from "./internal";
+import { InvalidateResponsibleModule } from "./proxies";
 
 /**
  * Contains events related to module lifecycle management.
@@ -51,6 +52,7 @@ export namespace Events {
 
 // Using the Events namespace from modules.ts instead of the lowercase events
 Events.ModuleDestroyed.register((module) => {
+  InvalidateResponsibleModule(module);
   if (internal.knownAsync.has(module)) {
     for (const proxy of internal.knownAsync.get(module) ?? []) {
       proxy.detach();
