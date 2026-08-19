@@ -50,4 +50,18 @@ describe("RegisteringProxy onRegister replay", () => {
 
     expect(seen).to.deep.equal(["a", "b"]);
   });
+
+  it("keeps legacy split handlers on the same manual route", () => {
+    const proxy = new RegisteringProxy<(id: string) => void>(
+      "test.split-manual-handlers",
+    );
+    const calls: string[] = [];
+
+    proxy.onRegister((id) => calls.push(`register:${id}`), true);
+    proxy.onUnregister((id) => calls.push(`unregister:${id}`));
+    proxy.register("item");
+    proxy.unregister("item");
+
+    expect(calls).to.deep.equal(["register:item", "unregister:item"]);
+  });
 });

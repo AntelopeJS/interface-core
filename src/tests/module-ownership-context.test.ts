@@ -9,7 +9,7 @@ import {
 } from "..";
 import { MissingProviderError } from "../errors";
 import { internal } from "../internal";
-import { Events } from "../modules";
+import { Events, RunWithModuleContext } from "../modules";
 
 function runDetached(module: string, callback: () => void): Promise<unknown> {
   return new Promise((resolve) => {
@@ -177,6 +177,31 @@ describe("explicit module ownership", () => {
       ModuleContextInvalidatedError,
     );
     expect(await proxy.call()).to.equal("reloaded");
+  });
+
+  it("invalidates provider-aware module contexts", async () => {
+    const proxy = new AsyncProxy<() => string>();
+    const staleAttachment = new Promise<unknown>((resolve) => {
+      RunWithModuleContext(
+        { module: "routed-module", provider: "routed-provider" },
+        () => {
+          setImmediate(() => {
+            try {
+              proxy.onCall(() => "stale");
+              resolve(undefined);
+            } catch (error) {
+              resolve(error);
+            }
+          });
+        },
+      );
+    });
+
+    Events.ModuleDestroyed.emit("routed-module");
+
+    expect(await staleAttachment).to.be.instanceOf(
+      ModuleContextInvalidatedError,
+    );
   });
 
   it("restores ownership when nested work throws", () => {

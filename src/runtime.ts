@@ -84,7 +84,9 @@ export const DEV_REGISTRY_PATH = ".antelope/dev.json";
  *
  * @returns Runtime information including dev mode, project path and environment
  */
-export const GetRuntimeInfo = InterfaceFunction<() => RuntimeInfo>();
+export const GetRuntimeInfo = InterfaceFunction<() => RuntimeInfo>(
+  "runtime.GetRuntimeInfo",
+);
 
 /**
  * Register a development server and the endpoints it is listening on.
@@ -96,5 +98,6 @@ export const GetRuntimeInfo = InterfaceFunction<() => RuntimeInfo>();
  * @param name Unique name of the server (e.g. 'api')
  * @param endpoints Endpoints the server is listening on
  */
-export const RegisterDevServer =
-  InterfaceFunction<(name: string, endpoints: DevServerEndpoint[]) => void>();
+export const RegisterDevServer = InterfaceFunction<
+  (name: string, endpoints: DevServerEndpoint[]) => void
+>("runtime.RegisterDevServer");
