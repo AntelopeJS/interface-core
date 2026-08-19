@@ -1,6 +1,5 @@
 import { spawnSync } from "node:child_process";
 import { cpSync, mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { expect } from "chai";
 import { AsyncProxy, ImplementInterface } from "..";
@@ -28,7 +27,7 @@ describe("global runtime protocol", () => {
   });
 
   it("converges compatible physical copies and accepts foreign proxy brands", async () => {
-    const temporary = mkdtempSync(join(tmpdir(), "interface-core-copy-"));
+    const temporary = mkdtempSync(join(process.cwd(), ".interface-core-copy-"));
     copyPath = join(temporary, "dist");
     cpSync(join(__dirname, ".."), copyPath, { recursive: true });
     const foreign = require(join(copyPath, "index.js")) as ForeignCore;
