@@ -1,4 +1,5 @@
 export const MISSING_PROVIDER_CODE = "ERR_NO_PROVIDER";
+export const MODULE_CONTEXT_INVALIDATED_CODE = "ERR_MODULE_CONTEXT_INVALIDATED";
 
 const MISSING_PROVIDER_MESSAGE =
   "Interface function called without implementation in test environment. " +
@@ -18,6 +19,18 @@ export class MissingProviderError extends Error {
   public constructor(detail?: string) {
     super(detail ?? MISSING_PROVIDER_MESSAGE);
     this.name = "MissingProviderError";
+  }
+}
+
+/**
+ * Error emitted when work inherited ownership from a destroyed module.
+ */
+export class ModuleContextInvalidatedError extends Error {
+  public readonly code = MODULE_CONTEXT_INVALIDATED_CODE;
+
+  public constructor(module: string) {
+    super(`Module context has been invalidated: ${module}`);
+    this.name = "ModuleContextInvalidatedError";
   }
 }
 

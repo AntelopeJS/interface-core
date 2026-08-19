@@ -3,12 +3,28 @@ import {
   AsyncProxy,
   EventProxy,
   GetResponsibleModule,
+  ModuleContextInvalidatedError,
   RegisteringProxy,
   RunWithResponsibleModule,
 } from "..";
 import { MissingProviderError } from "../errors";
 import { internal } from "../internal";
 import { Events } from "../modules";
+
+function runDetached(module: string, callback: () => void): Promise<unknown> {
+  return new Promise((resolve) => {
+    RunWithResponsibleModule(module, () => {
+      setImmediate(() => {
+        try {
+          callback();
+          resolve(undefined);
+        } catch (error) {
+          resolve(error);
+        }
+      });
+    });
+  });
+}
 
 describe("explicit module ownership", () => {
   let testStubMode: boolean;
@@ -72,6 +88,95 @@ describe("explicit module ownership", () => {
       await Promise.resolve();
       expect(GetResponsibleModule()).to.equal("async-module");
     });
+  });
+
+  it("does not let detached work register after module destruction", async () => {
+    const events = new EventProxy<() => void>();
+    let calls = 0;
+    const registration = runDetached("detached-module", () => {
+      events.register(() => {
+        calls += 1;
+      });
+    });
+
+    Events.ModuleDestroyed.emit("detached-module");
+    const error = await registration;
+    events.emit();
+
+    expect(error).to.be.instanceOf(ModuleContextInvalidatedError);
+    expect(calls).to.equal(0);
+  });
+
+  it("keeps old work invalid after reloading the same module", async () => {
+    const events = new EventProxy<(source: string) => void>();
+    const calls: string[] = [];
+    const oldRegistration = runDetached("reload-module", () => {
+      RunWithResponsibleModule("reload-module", () => {
+        events.register(() => calls.push("old"));
+      });
+    });
+
+    Events.ModuleDestroyed.emit("reload-module");
+    RunWithResponsibleModule("reload-module", () => {
+      events.register(() => calls.push("new"));
+    });
+    const oldError = await oldRegistration;
+    events.emit("event");
+
+    expect(oldError).to.be.instanceOf(ModuleContextInvalidatedError);
+    expect(calls).to.deep.equal(["new"]);
+  });
+
+  it("invalidates concurrent work from the destroyed generation", async () => {
+    const events = new EventProxy<() => void>();
+    const first = runDetached("concurrent-module", () =>
+      events.register(() => undefined),
+    );
+    const second = runDetached("concurrent-module", () =>
+      events.register(() => undefined),
+    );
+
+    Events.ModuleDestroyed.emit("concurrent-module");
+
+    expect(await first).to.be.instanceOf(ModuleContextInvalidatedError);
+    expect(await second).to.be.instanceOf(ModuleContextInvalidatedError);
+  });
+
+  it("invalidates only the destroyed nested context", async () => {
+    const calls: string[] = [];
+    const events = new EventProxy<() => void>();
+    let inner: Promise<unknown> | undefined;
+    const outer = RunWithResponsibleModule("outer-module", () => {
+      inner = runDetached("inner-module", () =>
+        events.register(() => calls.push("inner")),
+      );
+      return runDetached("outer-module", () =>
+        events.register(() => calls.push("outer")),
+      );
+    });
+
+    Events.ModuleDestroyed.emit("outer-module");
+    expect(await outer).to.be.instanceOf(ModuleContextInvalidatedError);
+    expect(await inner).to.equal(undefined);
+    events.emit();
+    expect(calls).to.deep.equal(["inner"]);
+  });
+
+  it("does not let stale providers replace a reloaded provider", async () => {
+    const proxy = new AsyncProxy<() => string>();
+    const staleAttachment = runDetached("provider-module", () =>
+      proxy.onCall(() => "stale"),
+    );
+
+    Events.ModuleDestroyed.emit("provider-module");
+    RunWithResponsibleModule("provider-module", () =>
+      proxy.onCall(() => "reloaded"),
+    );
+
+    expect(await staleAttachment).to.be.instanceOf(
+      ModuleContextInvalidatedError,
+    );
+    expect(await proxy.call()).to.equal("reloaded");
   });
 
   it("restores ownership when nested work throws", () => {
