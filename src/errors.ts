@@ -1,6 +1,7 @@
 export const MISSING_PROVIDER_CODE = "ERR_NO_PROVIDER";
 export const AMBIGUOUS_PROVIDER_CODE = "ERR_AMBIGUOUS_PROVIDER";
 export const PROVIDER_QUEUE_FULL_CODE = "ERR_PROVIDER_QUEUE_FULL";
+export const MODULE_CONTEXT_INVALIDATED_CODE = "ERR_MODULE_CONTEXT_INVALIDATED";
 
 const MISSING_PROVIDER_MESSAGE =
   "Interface function called without implementation in test environment. " +
@@ -44,6 +45,18 @@ export class ProviderQueueFullError extends Error {
       `Interface proxy ${proxyIdentity} has ${limit} pending operations without a provider.`,
     );
     this.name = "ProviderQueueFullError";
+  }
+}
+
+/**
+ * Error emitted when work inherited ownership from a destroyed module.
+ */
+export class ModuleContextInvalidatedError extends Error {
+  public readonly code = MODULE_CONTEXT_INVALIDATED_CODE;
+
+  public constructor(module: string) {
+    super(`Module context has been invalidated: ${module}`);
+    this.name = "ModuleContextInvalidatedError";
   }
 }
 

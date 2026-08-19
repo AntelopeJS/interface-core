@@ -18,6 +18,7 @@ export {
   GetResponsibleModule,
   IsInterfaceProxy,
   RegisteringProxy,
+  RunWithResponsibleModule,
 } from "./proxies";
 
 internal.asyncContextReporter = (trace: NodeJS.CallSite[]) => {

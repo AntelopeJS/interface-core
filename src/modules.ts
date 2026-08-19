@@ -1,8 +1,11 @@
 import { EventProxy, InterfaceFunction } from ".";
 import {
+  getModuleContext,
   internal,
+  invalidateModuleContext,
   type ModuleExecutionContext,
   type RuntimeCleanup,
+  runWithModuleContext,
 } from "./internal";
 
 /** Runs work with module ownership and an optional provider route across awaits. */
@@ -10,15 +13,12 @@ export function RunWithModuleContext<T>(
   context: ModuleExecutionContext,
   callback: () => T,
 ): T {
-  if (!context.module) {
-    throw new Error("Module execution context requires a module ID.");
-  }
-  return internal.executionContext.run(context, callback);
+  return runWithModuleContext(context, callback);
 }
 
 /** Returns the active module execution context, if one exists. */
 export function GetModuleContext(): ModuleExecutionContext | undefined {
-  return internal.executionContext.getStore();
+  return getModuleContext();
 }
 
 export type { ModuleExecutionContext } from "./internal";
@@ -96,6 +96,7 @@ function runCleanup(
 }
 
 Events.ModuleDestroyed.register((module) => {
+  invalidateModuleContext(module);
   for (const cleanup of internal.knownAsync.get(module) ?? []) {
     runCleanup(cleanup, module, "detach-async-provider");
   }

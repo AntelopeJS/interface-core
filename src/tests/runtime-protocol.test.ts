@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { cpSync, mkdtempSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { expect } from "chai";
-import { AsyncProxy, ImplementInterface } from "..";
+import { AsyncProxy, ImplementInterface, RunWithResponsibleModule } from "..";
 
 interface ForeignCore {
   AsyncProxy: new (
@@ -14,6 +14,7 @@ interface ForeignCore {
     declaration: Record<string, unknown>,
     implementation: Record<string, unknown>,
   ): unknown;
+  GetResponsibleModule(): string | undefined;
 }
 
 describe("global runtime protocol", () => {
@@ -35,6 +36,11 @@ describe("global runtime protocol", () => {
     const foreignProxy = new foreign.AsyncProxy("test.cross-copy");
 
     expect(foreignProxy).not.to.be.instanceOf(AsyncProxy);
+    expect(
+      RunWithResponsibleModule("shared-owner", () =>
+        foreign.GetResponsibleModule(),
+      ),
+    ).to.equal("shared-owner");
     foreign.ImplementInterface(
       { proxy: localProxy },
       { proxy: () => "shared" },

@@ -4,9 +4,12 @@ import {
   ProviderQueueFullError,
 } from "./errors";
 import {
+  getModuleContext,
   internal,
+  invalidateModuleContext,
   type ProxyBrand,
   RUNTIME_PROTOCOL_VERSION,
+  runWithModuleContext,
 } from "./internal";
 import { findResponsibleFile } from "./responsible-module";
 
@@ -132,7 +135,7 @@ export function GetInterfaceProxyIdentity(value: unknown): string | undefined {
 }
 
 function getAttachmentRoute(manualDetach?: boolean) {
-  const context = internal.executionContext.getStore();
+  const context = getModuleContext();
   const responsible =
     manualDetach || context?.module ? undefined : GetResponsibleModule();
   const owner = context?.module ?? responsible ?? DEFAULT_PROVIDER;
@@ -140,7 +143,7 @@ function getAttachmentRoute(manualDetach?: boolean) {
 }
 
 function getRequestedProvider(proxyIdentity: string) {
-  const context = internal.executionContext.getStore();
+  const context = getModuleContext();
   return context?.providerRoutes?.[proxyIdentity] ?? context?.provider;
 }
 
@@ -177,6 +180,19 @@ function reportRuntimeError(
     proxyIdentity,
     registrationId,
   });
+}
+
+/** @internal */
+export function InvalidateResponsibleModule(module: string): void {
+  invalidateModuleContext(module);
+}
+
+/** Runs work with explicit module ownership across asynchronous boundaries. */
+export function RunWithResponsibleModule<T>(
+  module: string,
+  callback: () => T,
+): T {
+  return runWithModuleContext({ module }, callback);
 }
 
 /** Proxy for an asynchronous interface function. */
@@ -223,9 +239,10 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
 
   /** Calls the provider selected by the current module execution context. */
   public call(...args: Parameters<T>): Promise<R> {
-    const requested = getRequestedProvider(this[PROXY_BRAND].identity);
+    let requested: string | undefined;
     let attachment: Attachment<T> | undefined;
     try {
+      requested = getRequestedProvider(this[PROXY_BRAND].identity);
       attachment = selectProvider(
         this.state.callbacks,
         this[PROXY_BRAND].identity,
@@ -303,7 +320,7 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
 
   /** Attaches an unregister callback to the current provider route. */
   public onUnregister(callback: (id: RID<T>) => void): AttachmentLease {
-    const context = internal.executionContext.getStore();
+    const context = getModuleContext();
     const requested = context?.provider ?? context?.module;
     const current = selectProvider(
       this.state.callbacks,
@@ -531,7 +548,7 @@ function captureCallStack(startFrame = 0): NodeJS.CallSite[] {
 
 /** Gets the responsible module from explicit async context or the call stack. */
 export function GetResponsibleModule(startFrame = 0): string | undefined {
-  const contextModule = internal.executionContext.getStore()?.module;
+  const contextModule = getModuleContext()?.module;
   if (contextModule) {
     return contextModule;
   }
