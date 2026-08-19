@@ -84,6 +84,47 @@ describe("generation-owned cleanup", () => {
     expect(calls).to.deep.equal(["new:item"]);
   });
 
+  it("keeps split handlers owned by their replacement generation", () => {
+    const proxy = new RegisteringProxy<(id: string) => void>(
+      "generation.split-registering",
+    );
+    const calls: string[] = [];
+    RunWithModuleContext(
+      { module: "shared", owner: "split#old", provider: "shared" },
+      () => proxy.onRegister((id) => calls.push(`old-register:${id}`)),
+    );
+    RunWithModuleContext(
+      { module: "shared", owner: "split#new", provider: "shared" },
+      () => proxy.onUnregister((id) => calls.push(`new-unregister:${id}`)),
+    );
+    proxy.register("item");
+
+    RunWithModuleContext(
+      { module: "shared", owner: "split#old", provider: "shared" },
+      () => {
+        Events.ModuleDestroyed.emit("shared");
+        Events.ModuleDestroyed.emit("shared");
+      },
+    );
+    proxy.unregister("item");
+
+    expect(calls).to.deep.equal(["new-unregister:item"]);
+    expect(internal.knownRegisters.has("split#old")).to.equal(false);
+    expect(internal.knownRegisters.has("split#new")).to.equal(true);
+
+    RunWithModuleContext(
+      { module: "shared", owner: "split#new", provider: "shared" },
+      () => {
+        Events.ModuleDestroyed.emit("shared");
+        Events.ModuleDestroyed.emit("shared");
+      },
+    );
+    internal.testStubMode = true;
+
+    expect(() => proxy.register("detached")).to.throw();
+    expect(internal.knownRegisters.has("split#new")).to.equal(false);
+  });
+
   it("cleans only registrations and events from the destroyed owner", () => {
     const registrations = new RegisteringProxy<(id: string) => void>(
       "generation.consumer-registering",

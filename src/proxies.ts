@@ -341,9 +341,11 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
   public onRegister(callback: T, manualDetach?: boolean): AttachmentLease {
     const route = getAttachmentRoute(manualDetach);
     const current = this.state.callbacks.get(route.provider);
+    const unregister =
+      current?.owner === route.owner ? current.unregister : undefined;
     return this.attachHandlers(
       bindProviderCallback(callback),
-      current?.unregister,
+      unregister,
       manualDetach,
       true,
       route,
@@ -359,13 +361,16 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
       this[PROXY_BRAND].identity,
       requested,
     );
-    const route = current
+    const contextOwner = context?.owner ?? context?.module;
+    const canExtendCurrent =
+      current && (!contextOwner || current.owner === contextOwner);
+    const route = canExtendCurrent
       ? { owner: current.owner, provider: current.provider }
       : getAttachmentRoute();
     return this.attachHandlers(
-      current?.register,
+      canExtendCurrent ? current.register : undefined,
       bindProviderCallback(callback),
-      current?.manualDetach,
+      canExtendCurrent ? current.manualDetach : undefined,
       false,
       route,
     );
