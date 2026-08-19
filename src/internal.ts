@@ -1,21 +1,35 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { ModuleContextInvalidatedError } from "./errors";
 
-export const RUNTIME_PROTOCOL_VERSION = 2;
+export const RUNTIME_PROTOCOL_VERSION = 3;
 export const RUNTIME_SYMBOL = Symbol.for("@antelopejs/interface-core/runtime");
 
+/** Provider connection metadata visible to an interface consumer. */
 export interface InterfaceConnection {
+  /** Optional connection alias. */
   id?: string;
+  /** Resolved interface package path. */
   path: string;
+  /** Module ID of the provider represented by this connection. */
+  provider: string;
+  /** Whether this provider is selected for unqualified interface calls. */
+  selected: boolean;
 }
 
+/** Module identity and provider routes propagated through asynchronous work. */
 export interface ModuleExecutionContext {
+  /** Stable module ID used by existing lifecycle and attribution APIs. */
   module: string;
+  /** Unique lifecycle generation ID. Defaults to the module ID when omitted. */
+  owner?: string;
+  /** Provider ID used when attaching implementations. */
   provider?: string;
+  /** Provider selections keyed by stable interface proxy identity. */
   providerRoutes?: Readonly<Record<string, string>>;
 }
 
 interface ActiveModuleExecutionContext extends ModuleExecutionContext {
+  owner: string;
   ownershipToken: symbol;
 }
 
@@ -52,11 +66,17 @@ export interface InterfaceRuntime {
   testStubMode: boolean;
   knownAsync: Map<string, Set<RuntimeCleanup | { detach(): void }>>;
   knownRegisters: Map<string, Set<RuntimeCleanup | { detach(): void }>>;
-  registeringProxies: Set<{ unregisterModule(module: string): void }>;
-  knownEvents: Set<{ unregisterModule(module: string): void }>;
+  registeringProxies: Set<{
+    unregisterModule(module: string): void;
+    unregisterOwner(owner: string): void;
+  }>;
+  knownEvents: Set<{
+    unregisterModule(module: string): void;
+    unregisterOwner(owner: string): void;
+  }>;
   interfaceConnections: Record<string, Record<string, InterfaceConnection[]>>;
   executionContext: AsyncLocalStorage<ActiveModuleExecutionContext>;
-  activeModuleTokens: Map<string, symbol>;
+  activeOwnerTokens: Map<string, symbol>;
   proxyStates: Map<string, RuntimeProxyState>;
   nextProxyIdentity: number;
   nextLeaseGeneration: number;
@@ -94,7 +114,7 @@ function createRuntime(): InterfaceRuntime {
       Record<string, InterfaceConnection[]>
     >,
     executionContext: new AsyncLocalStorage<ActiveModuleExecutionContext>(),
-    activeModuleTokens: new Map(),
+    activeOwnerTokens: new Map(),
     proxyStates: new Map(),
     nextProxyIdentity: 1,
     nextLeaseGeneration: 1,
@@ -133,19 +153,19 @@ function getRuntime(): InterfaceRuntime {
 /** @internal */
 export const internal = getRuntime();
 
-function getModuleToken(module: string): symbol {
-  const activeToken = internal.activeModuleTokens.get(module);
+function getOwnerToken(owner: string): symbol {
+  const activeToken = internal.activeOwnerTokens.get(owner);
   if (activeToken) {
     return activeToken;
   }
-  const token = Symbol(module);
-  internal.activeModuleTokens.set(module, token);
+  const token = Symbol(owner);
+  internal.activeOwnerTokens.set(owner, token);
   return token;
 }
 
 function assertActiveModuleContext(context: ActiveModuleExecutionContext) {
   if (
-    internal.activeModuleTokens.get(context.module) !== context.ownershipToken
+    internal.activeOwnerTokens.get(context.owner) !== context.ownershipToken
   ) {
     throw new ModuleContextInvalidatedError(context.module);
   }
@@ -162,14 +182,18 @@ export function runWithModuleContext<T>(
   if (!context.module) {
     throw new Error("Module execution context requires a module ID.");
   }
+  const owner = context.owner ?? context.module;
   const activeContext = {
     ...context,
-    ownershipToken: getModuleToken(context.module),
+    owner,
+    ownershipToken: getOwnerToken(owner),
   };
   return internal.executionContext.run(activeContext, callback);
 }
 
-export function getModuleContext(): ModuleExecutionContext | undefined {
+export function captureModuleContext():
+  | ActiveModuleExecutionContext
+  | undefined {
   const context = internal.executionContext.getStore();
   if (context) {
     assertActiveModuleContext(context);
@@ -177,6 +201,22 @@ export function getModuleContext(): ModuleExecutionContext | undefined {
   return context;
 }
 
-export function invalidateModuleContext(module: string) {
-  internal.activeModuleTokens.delete(module);
+export function runWithCapturedModuleContext<T>(
+  context: ActiveModuleExecutionContext,
+  callback: () => T,
+): T {
+  assertActiveModuleContext(context);
+  return internal.executionContext.run(context, callback);
+}
+
+export function peekModuleContext(): ModuleExecutionContext | undefined {
+  return internal.executionContext.getStore();
+}
+
+export function getModuleContext(): ModuleExecutionContext | undefined {
+  return captureModuleContext();
+}
+
+export function invalidateModuleContext(owner: string) {
+  internal.activeOwnerTokens.delete(owner);
 }

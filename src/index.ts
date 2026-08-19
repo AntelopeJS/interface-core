@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import type { Class } from "./decorators";
-import { internal } from "./internal";
+import { type InterfaceConnection, internal } from "./internal";
 import { Logging } from "./logging";
 import {
   AsyncProxy,
@@ -11,6 +11,7 @@ import {
 } from "./proxies";
 
 export * from "./errors";
+export type { InterfaceConnection } from "./internal";
 export {
   AsyncProxy,
   EventProxy,
@@ -289,11 +290,6 @@ export function ImplementInterface<
   const impl = implementation as Record<string, any>;
   attachImplementation(decl, impl);
   return { declaration: decl, implementation: impl as T2 };
-}
-
-interface InterfaceConnection {
-  id?: string;
-  path: string;
 }
 
 /**

@@ -4,11 +4,13 @@ import {
   ProviderQueueFullError,
 } from "./errors";
 import {
+  captureModuleContext,
   getModuleContext,
   internal,
   invalidateModuleContext,
   type ProxyBrand,
   RUNTIME_PROTOCOL_VERSION,
+  runWithCapturedModuleContext,
   runWithModuleContext,
 } from "./internal";
 import { findResponsibleFile } from "./responsible-module";
@@ -64,6 +66,7 @@ interface RegisterCallbacks<T extends RegisterFunction> {
 interface RegisteredEntry<T extends RegisterFunction> {
   args: RArgs<T>;
   module?: string;
+  owner?: string;
   provider?: string;
 }
 
@@ -74,6 +77,7 @@ interface RegisteringProxyState<T extends RegisterFunction> {
 
 interface EventEntry<T extends Func> {
   module?: string;
+  owner?: string;
   func: T;
 }
 
@@ -138,13 +142,37 @@ function getAttachmentRoute(manualDetach?: boolean) {
   const context = getModuleContext();
   const responsible =
     manualDetach || context?.module ? undefined : GetResponsibleModule();
-  const owner = context?.module ?? responsible ?? DEFAULT_PROVIDER;
+  const owner =
+    context?.owner ?? context?.module ?? responsible ?? DEFAULT_PROVIDER;
   return { owner, provider: context?.provider ?? owner };
 }
 
 function getRequestedProvider(proxyIdentity: string) {
   const context = getModuleContext();
   return context?.providerRoutes?.[proxyIdentity] ?? context?.provider;
+}
+
+function bindProviderCallback<T extends Func>(callback: T): T {
+  const context = captureModuleContext();
+  if (!context) {
+    return callback;
+  }
+  return ((...args: Parameters<T>) =>
+    runWithCapturedModuleContext(context, () => callback(...args))) as T;
+}
+
+interface ExecutionOwnership {
+  module?: string;
+  owner?: string;
+}
+
+function getExecutionOwnership(): ExecutionOwnership {
+  const context = getModuleContext();
+  if (context) {
+    return { module: context.module, owner: context.owner ?? context.module };
+  }
+  const module = GetResponsibleModule();
+  return { module, owner: module };
 }
 
 function selectProvider<T>(
@@ -212,13 +240,17 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
   public onCall(callback: T, manualDetach?: boolean): AttachmentLease {
     const route = getAttachmentRoute(manualDetach);
     const lease = { ...route, generation: internal.nextLeaseGeneration++ };
-    this.state.callbacks.set(route.provider, { callback, ...lease });
+    const providerCallback = bindProviderCallback(callback);
+    this.state.callbacks.set(route.provider, {
+      callback: providerCallback,
+      ...lease,
+    });
     if (!manualDetach) {
       internal.addAsyncProxy(route.owner, {
         cleanup: () => this.detach(lease),
       });
     }
-    this.replayQueue(route.provider, callback);
+    this.replayQueue(route.provider, providerCallback);
     return lease;
   }
 
@@ -310,7 +342,7 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
     const route = getAttachmentRoute(manualDetach);
     const current = this.state.callbacks.get(route.provider);
     return this.attachHandlers(
-      callback,
+      bindProviderCallback(callback),
       current?.unregister,
       manualDetach,
       true,
@@ -332,7 +364,7 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
       : getAttachmentRoute();
     return this.attachHandlers(
       current?.register,
-      callback,
+      bindProviderCallback(callback),
       current?.manualDetach,
       false,
       route,
@@ -345,7 +377,11 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
     unregister: (id: RID<T>) => void,
     manualDetach?: boolean,
   ): AttachmentLease {
-    return this.attachHandlers(register, unregister, manualDetach);
+    return this.attachHandlers(
+      bindProviderCallback(register),
+      bindProviderCallback(unregister),
+      manualDetach,
+    );
   }
 
   /** Detaches one leased provider, or every provider when called without a lease. */
@@ -384,8 +420,9 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
         internal.maxPendingOperations,
       );
     }
+    const ownership = getExecutionOwnership();
     this.state.registered.set(id, {
-      module: GetResponsibleModule(),
+      ...ownership,
       provider: requested ?? callback?.provider,
       args,
     });
@@ -412,8 +449,20 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
 
   /** Unregisters every entry owned by a destroyed module. */
   public unregisterModule(module: string) {
+    this.unregisterMatching((entry) => entry.module === module, module);
+  }
+
+  /** Unregisters every entry owned by a destroyed module generation. */
+  public unregisterOwner(owner: string) {
+    this.unregisterMatching((entry) => entry.owner === owner, owner);
+  }
+
+  private unregisterMatching(
+    matches: (entry: RegisteredEntry<T>) => boolean,
+    owner: string,
+  ) {
     for (const [id, entry] of this.state.registered) {
-      if (entry.module !== module) {
+      if (!matches(entry)) {
         continue;
       }
       try {
@@ -423,7 +472,7 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
           error,
           "unregister",
           this[PROXY_BRAND].identity,
-          module,
+          owner,
           id,
         );
       } finally {
@@ -515,7 +564,7 @@ export class EventProxy<T extends EventFunction = EventFunction> {
     if (this.state.registered.some((existing) => existing.func === func)) {
       return;
     }
-    this.state.registered.push({ module: GetResponsibleModule(), func });
+    this.state.registered.push({ ...getExecutionOwnership(), func });
   }
 
   /** Unregisters a handler. */
@@ -529,6 +578,13 @@ export class EventProxy<T extends EventFunction = EventFunction> {
   public unregisterModule(module: string) {
     this.state.registered = this.state.registered.filter(
       (entry) => entry.module !== module,
+    );
+  }
+
+  /** Unregisters handlers owned by a destroyed module generation. */
+  public unregisterOwner(owner: string) {
+    this.state.registered = this.state.registered.filter(
+      (entry) => entry.owner !== owner,
     );
   }
 }

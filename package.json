@@ -78,7 +78,8 @@
     "lint": "biome check .",
     "prepack": "pnpm run build",
     "release": "pnpm run lint && pnpm run prepack && release-it",
-    "test": "pnpm run build && ajs module test ."
+    "test": "pnpm run build && ajs module test .",
+    "test:package": "node test/package-consumer.mjs"
   },
   "antelopeJs": {
     "test": "src/antelope.test.ts",

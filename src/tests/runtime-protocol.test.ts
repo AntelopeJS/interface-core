@@ -2,7 +2,8 @@ import { spawnSync } from "node:child_process";
 import { cpSync, mkdtempSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { expect } from "chai";
-import { AsyncProxy, ImplementInterface, RunWithResponsibleModule } from "..";
+import { AsyncProxy, RunWithResponsibleModule } from "..";
+import { RunWithModuleContext } from "../modules";
 
 interface ForeignCore {
   AsyncProxy: new (
@@ -15,6 +16,14 @@ interface ForeignCore {
     implementation: Record<string, unknown>,
   ): unknown;
   GetResponsibleModule(): string | undefined;
+}
+
+interface ForeignContext {
+  owner?: string;
+}
+
+interface ForeignModules {
+  GetModuleContext(): ForeignContext | undefined;
 }
 
 describe("global runtime protocol", () => {
@@ -32,6 +41,9 @@ describe("global runtime protocol", () => {
     copyPath = join(temporary, "dist");
     cpSync(join(__dirname, ".."), copyPath, { recursive: true });
     const foreign = require(join(copyPath, "index.js")) as ForeignCore;
+    const foreignModules = require(
+      join(copyPath, "modules.js"),
+    ) as ForeignModules;
     const localProxy = new AsyncProxy<() => string>("test.cross-copy");
     const foreignProxy = new foreign.AsyncProxy("test.cross-copy");
 
@@ -41,16 +53,27 @@ describe("global runtime protocol", () => {
         foreign.GetResponsibleModule(),
       ),
     ).to.equal("shared-owner");
-    foreign.ImplementInterface(
-      { proxy: localProxy },
-      { proxy: () => "shared" },
+    RunWithModuleContext(
+      { module: "provider", owner: "provider#copy", provider: "provider" },
+      () =>
+        foreign.ImplementInterface(
+          { proxy: localProxy },
+          {
+            proxy: () => foreignModules.GetModuleContext()?.owner ?? "missing",
+          },
+        ),
     );
 
-    expect(await foreignProxy.call()).to.equal("shared");
-    ImplementInterface({ proxy: foreignProxy }, {
-      proxy: () => "local",
-    } as never);
-    expect(await localProxy.call()).to.equal("local");
+    expect(
+      await RunWithModuleContext(
+        {
+          module: "consumer",
+          owner: "consumer#copy",
+          providerRoutes: { "async:test.cross-copy": "provider" },
+        },
+        () => foreignProxy.call(),
+      ),
+    ).to.equal("provider#copy");
   });
 
   it("fails clearly when a realm already contains an incompatible protocol", () => {
