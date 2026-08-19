@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.0.9
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.0.8...v0.0.9)
+
+### 🔥 Performance
+
+- **proxies:** Avoid stack capture with explicit ownership ([#8](https://github.com/AntelopeJS/interface-core/pull/8))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <upd4ting@gmail.com>
+
 ## v0.0.8
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.0.7...v0.0.8)
