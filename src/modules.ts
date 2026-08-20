@@ -4,6 +4,7 @@ import {
   internal,
   invalidateModuleContext,
   type ModuleExecutionContext,
+  peekModuleContext,
   type RuntimeCleanup,
   runWithModuleContext,
 } from "./internal";
@@ -95,19 +96,28 @@ function runCleanup(
   }
 }
 
+function getDestroyedOwner(module: string): string {
+  const context = peekModuleContext();
+  if (context?.module !== module) {
+    return module;
+  }
+  return context.owner ?? module;
+}
+
 Events.ModuleDestroyed.register((module) => {
-  invalidateModuleContext(module);
-  for (const cleanup of internal.knownAsync.get(module) ?? []) {
-    runCleanup(cleanup, module, "detach-async-provider");
+  const owner = getDestroyedOwner(module);
+  invalidateModuleContext(owner);
+  for (const cleanup of internal.knownAsync.get(owner) ?? []) {
+    runCleanup(cleanup, owner, "detach-async-provider");
   }
-  internal.knownAsync.delete(module);
-  for (const cleanup of internal.knownRegisters.get(module) ?? []) {
-    runCleanup(cleanup, module, "detach-registering-provider");
+  internal.knownAsync.delete(owner);
+  for (const cleanup of internal.knownRegisters.get(owner) ?? []) {
+    runCleanup(cleanup, owner, "detach-registering-provider");
   }
-  internal.knownRegisters.delete(module);
+  internal.knownRegisters.delete(owner);
   for (const proxy of internal.registeringProxies) {
     try {
-      proxy.unregisterModule(module);
+      proxy.unregisterOwner(owner);
     } catch (error) {
       internal.runtimeErrorReporter?.(error, {
         operation: "unregister-module",
@@ -117,7 +127,7 @@ Events.ModuleDestroyed.register((module) => {
   }
   for (const proxy of internal.knownEvents) {
     try {
-      proxy.unregisterModule(module);
+      proxy.unregisterOwner(owner);
     } catch (error) {
       internal.runtimeErrorReporter?.(error, {
         operation: "unregister-event-module",

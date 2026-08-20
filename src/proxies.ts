@@ -4,11 +4,13 @@ import {
   ProviderQueueFullError,
 } from "./errors";
 import {
+  captureModuleContext,
   getModuleContext,
   internal,
   invalidateModuleContext,
   type ProxyBrand,
   RUNTIME_PROTOCOL_VERSION,
+  runWithCapturedModuleContext,
   runWithModuleContext,
 } from "./internal";
 import { findResponsibleFile } from "./responsible-module";
@@ -52,18 +54,25 @@ interface AsyncProxyState<T extends Func, R> {
   queue: Array<PendingCall<T, R>>;
 }
 
-interface RegisterCallbacks<T extends RegisterFunction> {
-  generation: number;
-  owner: string;
-  provider: string;
+interface RegisterAttachment<T extends Func> extends Attachment<T> {
   manualDetach: boolean;
-  register?: T;
-  unregister?: (id: RID<T>) => void;
+}
+
+interface RegisterCallbacks<T extends RegisterFunction> {
+  provider: string;
+  register?: RegisterAttachment<T>;
+  unregister?: RegisterAttachment<(id: RID<T>) => void>;
+}
+
+interface AttachmentOptions {
+  route: AttachmentRoute;
+  manualDetach: boolean;
 }
 
 interface RegisteredEntry<T extends RegisterFunction> {
   args: RArgs<T>;
   module?: string;
+  owner?: string;
   provider?: string;
 }
 
@@ -74,6 +83,7 @@ interface RegisteringProxyState<T extends RegisterFunction> {
 
 interface EventEntry<T extends Func> {
   module?: string;
+  owner?: string;
   func: T;
 }
 
@@ -138,13 +148,37 @@ function getAttachmentRoute(manualDetach?: boolean) {
   const context = getModuleContext();
   const responsible =
     manualDetach || context?.module ? undefined : GetResponsibleModule();
-  const owner = context?.module ?? responsible ?? DEFAULT_PROVIDER;
+  const owner =
+    context?.owner ?? context?.module ?? responsible ?? DEFAULT_PROVIDER;
   return { owner, provider: context?.provider ?? owner };
 }
 
 function getRequestedProvider(proxyIdentity: string) {
   const context = getModuleContext();
   return context?.providerRoutes?.[proxyIdentity] ?? context?.provider;
+}
+
+function bindProviderCallback<T extends Func>(callback: T): T {
+  const context = captureModuleContext();
+  if (!context) {
+    return callback;
+  }
+  return ((...args: Parameters<T>) =>
+    runWithCapturedModuleContext(context, () => callback(...args))) as T;
+}
+
+interface ExecutionOwnership {
+  module?: string;
+  owner?: string;
+}
+
+function getExecutionOwnership(): ExecutionOwnership {
+  const context = getModuleContext();
+  if (context) {
+    return { module: context.module, owner: context.owner ?? context.module };
+  }
+  const module = GetResponsibleModule();
+  return { module, owner: module };
 }
 
 function selectProvider<T>(
@@ -182,6 +216,16 @@ function reportRuntimeError(
   });
 }
 
+function matchesLease(
+  attachment: Attachment<unknown> | undefined,
+  lease: AttachmentLease,
+) {
+  return (
+    attachment?.generation === lease.generation &&
+    attachment.owner === lease.owner
+  );
+}
+
 /** @internal */
 export function InvalidateResponsibleModule(module: string): void {
   invalidateModuleContext(module);
@@ -212,13 +256,17 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
   public onCall(callback: T, manualDetach?: boolean): AttachmentLease {
     const route = getAttachmentRoute(manualDetach);
     const lease = { ...route, generation: internal.nextLeaseGeneration++ };
-    this.state.callbacks.set(route.provider, { callback, ...lease });
+    const providerCallback = bindProviderCallback(callback);
+    this.state.callbacks.set(route.provider, {
+      callback: providerCallback,
+      ...lease,
+    });
     if (!manualDetach) {
       internal.addAsyncProxy(route.owner, {
         cleanup: () => this.detach(lease),
       });
     }
-    this.replayQueue(route.provider, callback);
+    this.replayQueue(route.provider, providerCallback);
     return lease;
   }
 
@@ -308,13 +356,10 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
   /** Attaches a register callback. */
   public onRegister(callback: T, manualDetach?: boolean): AttachmentLease {
     const route = getAttachmentRoute(manualDetach);
-    const current = this.state.callbacks.get(route.provider);
-    return this.attachHandlers(
-      callback,
-      current?.unregister,
-      manualDetach,
-      true,
+    return this.attachRegister(
+      bindProviderCallback(callback),
       route,
+      Boolean(manualDetach),
     );
   }
 
@@ -327,16 +372,19 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
       this[PROXY_BRAND].identity,
       requested,
     );
-    const route = current
-      ? { owner: current.owner, provider: current.provider }
-      : getAttachmentRoute();
-    return this.attachHandlers(
-      current?.register,
-      callback,
-      current?.manualDetach,
-      false,
-      route,
-    );
+    const contextOwner = context?.owner ?? context?.module;
+    const attachments = [current?.unregister, current?.register];
+    const sibling = contextOwner
+      ? attachments.find((attachment) => attachment?.owner === contextOwner)
+      : attachments.find((attachment) => Boolean(attachment));
+    const canExtendCurrent = current && sibling;
+    const options: AttachmentOptions = canExtendCurrent
+      ? {
+          route: { owner: sibling.owner, provider: current.provider },
+          manualDetach: sibling.manualDetach,
+        }
+      : { route: getAttachmentRoute(), manualDetach: false };
+    return this.attachUnregister(bindProviderCallback(callback), options);
   }
 
   /** Atomically attaches both registration handlers. */
@@ -345,7 +393,18 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
     unregister: (id: RID<T>) => void,
     manualDetach?: boolean,
   ): AttachmentLease {
-    return this.attachHandlers(register, unregister, manualDetach);
+    const route = getAttachmentRoute(manualDetach);
+    const lease = this.createLease(route);
+    const boundRegister = bindProviderCallback(register);
+    const boundUnregister = bindProviderCallback(unregister);
+    this.state.callbacks.set(route.provider, {
+      provider: route.provider,
+      register: this.createAttachment(boundRegister, lease, manualDetach),
+      unregister: this.createAttachment(boundUnregister, lease, manualDetach),
+    });
+    this.trackAttachment(lease, Boolean(manualDetach));
+    this.replayRegistrations(route.provider, boundRegister);
+    return lease;
   }
 
   /** Detaches one leased provider, or every provider when called without a lease. */
@@ -355,10 +414,16 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
       return;
     }
     const current = this.state.callbacks.get(lease.provider);
-    if (
-      current?.generation === lease.generation &&
-      current.owner === lease.owner
-    ) {
+    if (!current) {
+      return;
+    }
+    if (matchesLease(current.register, lease)) {
+      current.register = undefined;
+    }
+    if (matchesLease(current.unregister, lease)) {
+      current.unregister = undefined;
+    }
+    if (!current.register && !current.unregister) {
       this.state.callbacks.delete(lease.provider);
     }
   }
@@ -384,12 +449,13 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
         internal.maxPendingOperations,
       );
     }
+    const ownership = getExecutionOwnership();
     this.state.registered.set(id, {
-      module: GetResponsibleModule(),
+      ...ownership,
       provider: requested ?? callback?.provider,
       args,
     });
-    callback?.register?.(id, ...args);
+    callback?.register?.callback(id, ...args);
   }
 
   /** Unregisters an entry from the provider that accepted it. */
@@ -404,7 +470,7 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
       entry.provider,
     );
     try {
-      callback?.unregister?.(id);
+      callback?.unregister?.callback(id);
     } finally {
       this.state.registered.delete(id);
     }
@@ -412,8 +478,20 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
 
   /** Unregisters every entry owned by a destroyed module. */
   public unregisterModule(module: string) {
+    this.unregisterMatching((entry) => entry.module === module, module);
+  }
+
+  /** Unregisters every entry owned by a destroyed module generation. */
+  public unregisterOwner(owner: string) {
+    this.unregisterMatching((entry) => entry.owner === owner, owner);
+  }
+
+  private unregisterMatching(
+    matches: (entry: RegisteredEntry<T>) => boolean,
+    owner: string,
+  ) {
     for (const [id, entry] of this.state.registered) {
-      if (entry.module !== module) {
+      if (!matches(entry)) {
         continue;
       }
       try {
@@ -423,7 +501,7 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
           error,
           "unregister",
           this[PROXY_BRAND].identity,
-          module,
+          owner,
           id,
         );
       } finally {
@@ -432,31 +510,58 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
     }
   }
 
-  private attachHandlers(
-    register?: T,
-    unregister?: (id: RID<T>) => void,
-    manualDetach?: boolean,
-    shouldReplay = true,
-    attachmentRoute?: AttachmentRoute,
+  private attachRegister(
+    callback: T,
+    route: AttachmentRoute,
+    manualDetach: boolean,
   ): AttachmentLease {
-    const route = attachmentRoute ?? getAttachmentRoute(manualDetach);
-    const lease = { ...route, generation: internal.nextLeaseGeneration++ };
+    const lease = this.createLease(route);
+    const current = this.state.callbacks.get(route.provider);
     this.state.callbacks.set(route.provider, {
-      register,
-      unregister,
-      manualDetach: Boolean(manualDetach),
-      ...lease,
+      provider: route.provider,
+      register: this.createAttachment(callback, lease, manualDetach),
+      unregister: current?.unregister,
     });
+    this.trackAttachment(lease, manualDetach);
+    this.replayRegistrations(route.provider, callback);
+    return lease;
+  }
+
+  private attachUnregister(
+    callback: (id: RID<T>) => void,
+    options: AttachmentOptions,
+  ): AttachmentLease {
+    const { route, manualDetach } = options;
+    const lease = this.createLease(route);
+    const current = this.state.callbacks.get(route.provider);
+    this.state.callbacks.set(route.provider, {
+      provider: route.provider,
+      register: current?.register,
+      unregister: this.createAttachment(callback, lease, manualDetach),
+    });
+    this.trackAttachment(lease, manualDetach);
+    return lease;
+  }
+
+  private trackAttachment(lease: AttachmentLease, manualDetach: boolean) {
     if (!manualDetach) {
-      internal.addRegisteringProxy(route.owner, {
+      internal.addRegisteringProxy(lease.owner, {
         cleanup: () => this.detach(lease),
         unregisterModule: (module: string) => this.unregisterModule(module),
       });
     }
-    if (register && shouldReplay) {
-      this.replayRegistrations(route.provider, register);
-    }
-    return lease;
+  }
+
+  private createLease(route: AttachmentRoute): AttachmentLease {
+    return { ...route, generation: internal.nextLeaseGeneration++ };
+  }
+
+  private createAttachment<F extends Func>(
+    callback: F,
+    lease: AttachmentLease,
+    manualDetach?: boolean,
+  ): RegisterAttachment<F> {
+    return { callback, ...lease, manualDetach: Boolean(manualDetach) };
   }
 
   private replayRegistrations(provider: string, callback: T) {
@@ -515,7 +620,7 @@ export class EventProxy<T extends EventFunction = EventFunction> {
     if (this.state.registered.some((existing) => existing.func === func)) {
       return;
     }
-    this.state.registered.push({ module: GetResponsibleModule(), func });
+    this.state.registered.push({ ...getExecutionOwnership(), func });
   }
 
   /** Unregisters a handler. */
@@ -529,6 +634,13 @@ export class EventProxy<T extends EventFunction = EventFunction> {
   public unregisterModule(module: string) {
     this.state.registered = this.state.registered.filter(
       (entry) => entry.module !== module,
+    );
+  }
+
+  /** Unregisters handlers owned by a destroyed module generation. */
+  public unregisterOwner(owner: string) {
+    this.state.registered = this.state.registered.filter(
+      (entry) => entry.owner !== owner,
     );
   }
 }
