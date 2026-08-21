@@ -77,6 +77,7 @@ export interface InterfaceRuntime {
   interfaceConnections: Record<string, Record<string, InterfaceConnection[]>>;
   executionContext: AsyncLocalStorage<ActiveModuleExecutionContext>;
   activeOwnerTokens: Map<string, symbol>;
+  moduleOwners: Map<string, Set<string>>;
   proxyStates: Map<string, RuntimeProxyState>;
   nextProxyIdentity: number;
   nextLeaseGeneration: number;
@@ -115,6 +116,7 @@ function createRuntime(): InterfaceRuntime {
     >,
     executionContext: new AsyncLocalStorage<ActiveModuleExecutionContext>(),
     activeOwnerTokens: new Map(),
+    moduleOwners: new Map(),
     proxyStates: new Map(),
     nextProxyIdentity: 1,
     nextLeaseGeneration: 1,
@@ -138,6 +140,7 @@ function getRuntime(): InterfaceRuntime {
     );
   }
   if (existing) {
+    existing.moduleOwners ??= new Map();
     return existing;
   }
   const runtime = createRuntime();
@@ -163,6 +166,10 @@ function getOwnerToken(owner: string): symbol {
   return token;
 }
 
+function trackModuleOwner(module: string, owner: string) {
+  addToMapSet(internal.moduleOwners, module, owner);
+}
+
 function assertActiveModuleContext(context: ActiveModuleExecutionContext) {
   if (
     internal.activeOwnerTokens.get(context.owner) !== context.ownershipToken
@@ -183,6 +190,7 @@ export function runWithModuleContext<T>(
     throw new Error("Module execution context requires a module ID.");
   }
   const owner = context.owner ?? context.module;
+  trackModuleOwner(context.module, owner);
   const activeContext = {
     ...context,
     owner,
@@ -197,6 +205,7 @@ export function captureModuleContext():
   const context = internal.executionContext.getStore();
   if (context) {
     assertActiveModuleContext(context);
+    trackModuleOwner(context.module, context.owner);
   }
   return context;
 }
@@ -217,6 +226,20 @@ export function getModuleContext(): ModuleExecutionContext | undefined {
   return captureModuleContext();
 }
 
+function removeOwnerFromModules(owner: string) {
+  for (const [module, owners] of internal.moduleOwners) {
+    owners.delete(owner);
+    if (!owners.size) {
+      internal.moduleOwners.delete(module);
+    }
+  }
+}
+
+export function getModuleOwners(module: string): ReadonlySet<string> {
+  return internal.moduleOwners.get(module) ?? new Set();
+}
+
 export function invalidateModuleContext(owner: string) {
   internal.activeOwnerTokens.delete(owner);
+  removeOwnerFromModules(owner);
 }

@@ -1,6 +1,7 @@
 import {
   captureModuleContext,
   getModuleContext,
+  getModuleOwners,
   internal,
   invalidateModuleContext,
   type ModuleExecutionContext,
@@ -123,16 +124,15 @@ function runCleanup(
   }
 }
 
-function getDestroyedOwner(module: string): string {
+function getDestroyedOwners(module: string): string[] {
   const context = peekModuleContext();
-  if (context?.module !== module) {
-    return module;
+  if (context?.module === module) {
+    return [context.owner ?? module];
   }
-  return context.owner ?? module;
+  return [...new Set([module, ...getModuleOwners(module)])];
 }
 
-Events.ModuleDestroyed.register((module) => {
-  const owner = getDestroyedOwner(module);
+function cleanupDestroyedOwner(module: string, owner: string) {
   invalidateModuleContext(owner);
   for (const cleanup of internal.knownAsync.get(owner) ?? []) {
     runCleanup(cleanup, owner, "detach-async-provider");
@@ -162,6 +162,12 @@ Events.ModuleDestroyed.register((module) => {
       });
     }
   }
+}
+
+Events.ModuleDestroyed.register((module) => {
+  getDestroyedOwners(module).forEach((owner) => {
+    cleanupDestroyedOwner(module, owner);
+  });
 });
 
 /**

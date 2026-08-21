@@ -80,6 +80,44 @@ describe("provider callback context", () => {
     expect(() => bound()).to.throw(ModuleContextInvalidatedError);
   });
 
+  it("keeps a replacement bound after destroying the previous generation", () => {
+    const stale = RunWithModuleContext(
+      { module: "reloaded-consumer", owner: "consumer#old" },
+      () => BindToCurrentModuleContext(() => "old"),
+    );
+    Events.ModuleDestroyed.emit("reloaded-consumer");
+    const replacement = RunWithModuleContext(
+      { module: "reloaded-consumer", owner: "consumer#new" },
+      () => BindToCurrentModuleContext(() => "new"),
+    );
+
+    expect(() => stale()).to.throw(ModuleContextInvalidatedError);
+    expect(replacement()).to.equal("new");
+  });
+
+  it("invalidates only the generation destroyed in its own context", () => {
+    const staleContext = {
+      module: "concurrent-consumer",
+      owner: "concurrent-consumer#old",
+    };
+    const stale = RunWithModuleContext(staleContext, () =>
+      BindToCurrentModuleContext(() => "old"),
+    );
+    const replacement = RunWithModuleContext(
+      {
+        module: "concurrent-consumer",
+        owner: "concurrent-consumer#new",
+      },
+      () => BindToCurrentModuleContext(() => "new"),
+    );
+    RunWithModuleContext(staleContext, () =>
+      Events.ModuleDestroyed.emit("concurrent-consumer"),
+    );
+
+    expect(() => stale()).to.throw(ModuleContextInvalidatedError);
+    expect(replacement()).to.equal("new");
+  });
+
   it("restores async provider context across awaits and nested calls", async () => {
     const nested = new AsyncProxy<() => string>("context.nested");
     const outer = new AsyncProxy<() => Promise<ContextObservation[]>>(
