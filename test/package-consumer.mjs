@@ -36,6 +36,7 @@ function createConsumer(tarball) {
 
 const typeConsumerSource = `
 import {
+  BindToCurrentModuleContext,
   GetRuntimeInfo,
   ListModules,
   type InterfaceConnection,
@@ -53,6 +54,7 @@ const context: ModuleExecutionContext = {
 };
 void connection;
 void context;
+void BindToCurrentModuleContext;
 void GetRuntimeInfo;
 void ListModules;
 `;
@@ -77,6 +79,7 @@ const { internal } = require("@antelopejs/interface-core/internal");
 
 assert.equal(core.GetRuntimeInfo, runtime.GetRuntimeInfo);
 assert.equal(core.RegisterDevServer, runtime.RegisterDevServer);
+assert.equal(core.BindToCurrentModuleContext, modules.BindToCurrentModuleContext);
 assert.equal(core.ListModules, modules.ListModules);
 assert.equal(core.Events, modules.Events);
 assert.equal(core.IsInterfaceProxy(core.GetRuntimeInfo.proxy), true);

@@ -22,6 +22,7 @@ const core = loaded.root;
 const modules = loaded.modules;
 const runtime = loaded.runtime;
 assert.equal(core.Events, modules.Events);
+assert.equal(core.BindToCurrentModuleContext, modules.BindToCurrentModuleContext);
 assert.equal(core.ListModules, modules.ListModules);
 assert.equal(core.GetModuleInfo, modules.GetModuleInfo);
 assert.equal(core.GetRuntimeInfo, runtime.GetRuntimeInfo);
@@ -49,6 +50,9 @@ describe("root interface declarations", () => {
   });
 
   it("exports the canonical module proxies", () => {
+    expect(declarations.BindToCurrentModuleContext).to.equal(
+      modules.BindToCurrentModuleContext,
+    );
     expect(declarations.Events).to.equal(modules.Events);
     expect(declarations.ListModules).to.equal(modules.ListModules);
     expect(declarations.GetModuleInfo).to.equal(modules.GetModuleInfo);
