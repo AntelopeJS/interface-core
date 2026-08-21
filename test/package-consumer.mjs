@@ -23,7 +23,14 @@ function createConsumer(tarball) {
       },
     }),
   );
-  writeFileSync(join(temporary, "contract.cjs"), consumerSource);
+  writeFileSync(
+    join(temporary, "contract-root-first.cjs"),
+    createConsumerSource(rootFirstImports),
+  );
+  writeFileSync(
+    join(temporary, "contract-subpaths-first.cjs"),
+    createConsumerSource(subpathsFirstImports),
+  );
   writeFileSync(join(temporary, "contract.ts"), typeConsumerSource);
 }
 
@@ -50,16 +57,32 @@ void GetRuntimeInfo;
 void ListModules;
 `;
 
-const consumerSource = `
-const assert = require("node:assert/strict");
+const rootFirstImports = `
 const core = require("@antelopejs/interface-core");
-const { internal } = require("@antelopejs/interface-core/internal");
 const modules = require("@antelopejs/interface-core/modules");
 const runtime = require("@antelopejs/interface-core/runtime");
+`;
+
+const subpathsFirstImports = `
+const modules = require("@antelopejs/interface-core/modules");
+const runtime = require("@antelopejs/interface-core/runtime");
+const core = require("@antelopejs/interface-core");
+`;
+
+function createConsumerSource(imports) {
+  return `
+const assert = require("node:assert/strict");
+${imports}
+const { internal } = require("@antelopejs/interface-core/internal");
 
 assert.equal(core.GetRuntimeInfo, runtime.GetRuntimeInfo);
 assert.equal(core.RegisterDevServer, runtime.RegisterDevServer);
 assert.equal(core.ListModules, modules.ListModules);
+assert.equal(core.Events, modules.Events);
+assert.equal(core.IsInterfaceProxy(core.GetRuntimeInfo.proxy), true);
+assert.equal(core.IsInterfaceProxy(core.ListModules.proxy), true);
+assert.equal(core.GetInterfaceProxyIdentity(core.GetRuntimeInfo.proxy), "async:runtime.GetRuntimeInfo");
+assert.equal(core.GetInterfaceProxyIdentity(core.ListModules.proxy), "async:modules.ListModules");
 
 const proxy = core.InterfaceFunction("package-consumer.context");
 const identity = core.GetInterfaceProxyIdentity(proxy.proxy);
@@ -111,6 +134,7 @@ modules.RunWithModuleContext(providerContext, () => {
   process.exitCode = 1;
 });
 `;
+}
 
 try {
   run("corepack", ["pnpm", "run", "build"], repository);
@@ -146,7 +170,8 @@ try {
     ],
     temporary,
   );
-  run(process.execPath, ["contract.cjs"], temporary);
+  run(process.execPath, ["contract-root-first.cjs"], temporary);
+  run(process.execPath, ["contract-subpaths-first.cjs"], temporary);
 } finally {
   rmSync(temporary, { force: true, recursive: true });
 }
