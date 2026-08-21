@@ -28,7 +28,11 @@ function createConsumer(tarball) {
 }
 
 const typeConsumerSource = `
-import type { InterfaceConnection } from "@antelopejs/interface-core";
+import {
+  GetRuntimeInfo,
+  ListModules,
+  type InterfaceConnection,
+} from "@antelopejs/interface-core";
 import type { ModuleExecutionContext } from "@antelopejs/interface-core/modules";
 
 const connection: InterfaceConnection = {
@@ -42,6 +46,8 @@ const context: ModuleExecutionContext = {
 };
 void connection;
 void context;
+void GetRuntimeInfo;
+void ListModules;
 `;
 
 const consumerSource = `
@@ -49,6 +55,11 @@ const assert = require("node:assert/strict");
 const core = require("@antelopejs/interface-core");
 const { internal } = require("@antelopejs/interface-core/internal");
 const modules = require("@antelopejs/interface-core/modules");
+const runtime = require("@antelopejs/interface-core/runtime");
+
+assert.equal(core.GetRuntimeInfo, runtime.GetRuntimeInfo);
+assert.equal(core.RegisterDevServer, runtime.RegisterDevServer);
+assert.equal(core.ListModules, modules.ListModules);
 
 const proxy = core.InterfaceFunction("package-consumer.context");
 const identity = core.GetInterfaceProxyIdentity(proxy.proxy);
