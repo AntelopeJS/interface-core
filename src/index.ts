@@ -312,5 +312,24 @@ export function GetInterfaceInstance(
   );
 }
 
-export * from "./modules";
-export * from "./runtime";
+export {
+  DestroyModule,
+  Events,
+  GetModuleInfo,
+  ListModules,
+  LoadModule,
+  type ModuleDefinition,
+  type ModuleInfo,
+  ReloadModule,
+  StartModule,
+  StopModule,
+} from "./modules";
+export {
+  DEV_REGISTRY_PATH,
+  type DevServerEndpoint,
+  type DevServerEntry,
+  type DevServerRegistry,
+  GetRuntimeInfo,
+  RegisterDevServer,
+  type RuntimeInfo,
+} from "./runtime";

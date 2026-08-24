@@ -14,7 +14,13 @@ import { EventProxy, InterfaceFunction } from "./proxies";
 
 type ModuleCallback<A extends any[] = any[], R = any> = (...args: A) => R;
 
-/** Runs work with module ownership and an optional provider route across awaits. */
+/**
+ * Runs work with module ownership and provider routing across asynchronous work.
+ *
+ * This is an infrastructure API for AntelopeJS Core and custom module loaders.
+ * Application modules should rely on the context installed by Core and use
+ * `importOverrides` to select providers instead of calling this function.
+ */
 export function RunWithModuleContext<T>(
   context: ModuleExecutionContext,
   callback: () => T,
@@ -22,12 +28,24 @@ export function RunWithModuleContext<T>(
   return runWithModuleContext(context, callback);
 }
 
-/** Returns the active module execution context, if one exists. */
+/**
+ * Returns the active module execution context, if one exists.
+ *
+ * This is intended for framework and interface infrastructure. Application
+ * modules do not need to inspect their execution context during normal use.
+ */
 export function GetModuleContext(): ModuleExecutionContext | undefined {
   return getModuleContext();
 }
 
-/** Binds a callback to the active module generation and provider routes. */
+/**
+ * Binds a callback to the active module generation and provider routes.
+ *
+ * Interface authors should bind callbacks received from a consumer when a
+ * provider will invoke them from its own execution context, either immediately
+ * or later. Ordinary module lifecycle and interface calls are already managed
+ * by Core and the proxy runtime and do not need explicit binding.
+ */
 export function BindToCurrentModuleContext<T extends ModuleCallback>(
   callback: T,
 ): T {

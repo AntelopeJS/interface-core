@@ -22,11 +22,16 @@ const core = loaded.root;
 const modules = loaded.modules;
 const runtime = loaded.runtime;
 assert.equal(core.Events, modules.Events);
-assert.equal(core.BindToCurrentModuleContext, modules.BindToCurrentModuleContext);
 assert.equal(core.ListModules, modules.ListModules);
 assert.equal(core.GetModuleInfo, modules.GetModuleInfo);
 assert.equal(core.GetRuntimeInfo, runtime.GetRuntimeInfo);
 assert.equal(core.RegisterDevServer, runtime.RegisterDevServer);
+assert.equal(core.BindToCurrentModuleContext, undefined);
+assert.equal(core.GetModuleContext, undefined);
+assert.equal(core.RunWithModuleContext, undefined);
+assert.equal(typeof modules.BindToCurrentModuleContext, "function");
+assert.equal(typeof modules.GetModuleContext, "function");
+assert.equal(typeof modules.RunWithModuleContext, "function");
 assert.equal(core.IsInterfaceProxy(core.ListModules.proxy), true);
 assert.equal(core.IsInterfaceProxy(core.GetRuntimeInfo.proxy), true);
 assert.equal(core.GetInterfaceProxyIdentity(core.ListModules.proxy), "async:modules.ListModules");
@@ -50,12 +55,18 @@ describe("root interface declarations", () => {
   });
 
   it("exports the canonical module proxies", () => {
-    expect(declarations.BindToCurrentModuleContext).to.equal(
-      modules.BindToCurrentModuleContext,
-    );
     expect(declarations.Events).to.equal(modules.Events);
     expect(declarations.ListModules).to.equal(modules.ListModules);
     expect(declarations.GetModuleInfo).to.equal(modules.GetModuleInfo);
+  });
+
+  it("keeps execution context APIs on the modules subpath", () => {
+    expect("BindToCurrentModuleContext" in declarations).to.equal(false);
+    expect("GetModuleContext" in declarations).to.equal(false);
+    expect("RunWithModuleContext" in declarations).to.equal(false);
+    expect(modules.BindToCurrentModuleContext).to.be.a("function");
+    expect(modules.GetModuleContext).to.be.a("function");
+    expect(modules.RunWithModuleContext).to.be.a("function");
   });
 
   it("loads complete canonical declarations when the root loads first", () => {

@@ -36,12 +36,16 @@ function createConsumer(tarball) {
 
 const typeConsumerSource = `
 import {
-  BindToCurrentModuleContext,
   GetRuntimeInfo,
   ListModules,
   type InterfaceConnection,
 } from "@antelopejs/interface-core";
-import type { ModuleExecutionContext } from "@antelopejs/interface-core/modules";
+import {
+  BindToCurrentModuleContext,
+  GetModuleContext,
+  type ModuleExecutionContext,
+  RunWithModuleContext,
+} from "@antelopejs/interface-core/modules";
 
 const connection: InterfaceConnection = {
   path: "example",
@@ -55,8 +59,10 @@ const context: ModuleExecutionContext = {
 void connection;
 void context;
 void BindToCurrentModuleContext;
+void GetModuleContext;
 void GetRuntimeInfo;
 void ListModules;
+void RunWithModuleContext;
 `;
 
 const rootFirstImports = `
@@ -79,9 +85,14 @@ const { internal } = require("@antelopejs/interface-core/internal");
 
 assert.equal(core.GetRuntimeInfo, runtime.GetRuntimeInfo);
 assert.equal(core.RegisterDevServer, runtime.RegisterDevServer);
-assert.equal(core.BindToCurrentModuleContext, modules.BindToCurrentModuleContext);
 assert.equal(core.ListModules, modules.ListModules);
 assert.equal(core.Events, modules.Events);
+assert.equal(core.BindToCurrentModuleContext, undefined);
+assert.equal(core.GetModuleContext, undefined);
+assert.equal(core.RunWithModuleContext, undefined);
+assert.equal(typeof modules.BindToCurrentModuleContext, "function");
+assert.equal(typeof modules.GetModuleContext, "function");
+assert.equal(typeof modules.RunWithModuleContext, "function");
 assert.equal(core.IsInterfaceProxy(core.GetRuntimeInfo.proxy), true);
 assert.equal(core.IsInterfaceProxy(core.ListModules.proxy), true);
 assert.equal(core.GetInterfaceProxyIdentity(core.GetRuntimeInfo.proxy), "async:runtime.GetRuntimeInfo");
