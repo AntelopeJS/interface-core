@@ -339,6 +339,17 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
   }
 }
 
+/** Creates an interface function backed by an asynchronous proxy. */
+export function InterfaceFunction<
+  T extends Func = Func,
+  R = Awaited<ReturnType<T>>,
+>(identity?: string): (...args: Parameters<T>) => Promise<R> {
+  const proxy = new AsyncProxy<T, R>(identity);
+  const func = (...args: Parameters<T>) => proxy.call(...args);
+  func.proxy = proxy;
+  return func;
+}
+
 /** Proxy for provider-aware register and unregister handlers. */
 export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
   public readonly [PROXY_BRAND]: ProxyBrand;

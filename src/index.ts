@@ -3,7 +3,7 @@ import type { Class } from "./decorators";
 import { type InterfaceConnection, internal } from "./internal";
 import { Logging } from "./logging";
 import {
-  AsyncProxy,
+  type AsyncProxy,
   type EventProxy,
   GetResponsibleModule,
   IsInterfaceProxy,
@@ -17,6 +17,7 @@ export {
   EventProxy,
   GetInterfaceProxyIdentity,
   GetResponsibleModule,
+  InterfaceFunction,
   IsInterfaceProxy,
   RegisteringProxy,
   RunWithResponsibleModule,
@@ -74,24 +75,6 @@ export function GetMetadata<
 }
 
 type Func<A extends any[] = any[], R = any> = (...args: A) => R;
-
-/**
- * Creates an interface function proxy.
- *
- * Returns a function that routes calls through an AsyncProxy, allowing for module-aware
- * asynchronous function calls that can be implemented by other modules.
- *
- * @returns A function that proxies calls to the implementation when available
- */
-export function InterfaceFunction<
-  T extends Func = Func,
-  R = Awaited<ReturnType<T>>,
->(identity?: string): (...args: Parameters<T>) => Promise<R> {
-  const proxy = new AsyncProxy<T, R>(identity);
-  const func = (...args: Parameters<T>) => proxy.call(...args);
-  func.proxy = proxy;
-  return func;
-}
 
 type RID<T> = T extends (id: infer P, ...args: any[]) => void ? P : never;
 
@@ -328,3 +311,6 @@ export function GetInterfaceInstance(
     (connection) => connection.id === connectionID,
   );
 }
+
+export * from "./modules";
+export * from "./runtime";

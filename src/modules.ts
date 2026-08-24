@@ -1,4 +1,3 @@
-import { EventProxy, InterfaceFunction } from ".";
 import {
   getModuleContext,
   internal,
@@ -8,6 +7,7 @@ import {
   type RuntimeCleanup,
   runWithModuleContext,
 } from "./internal";
+import { EventProxy, InterfaceFunction } from "./proxies";
 
 /** Runs work with module ownership and an optional provider route across awaits. */
 export function RunWithModuleContext<T>(

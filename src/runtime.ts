@@ -1,4 +1,4 @@
-import { InterfaceFunction } from ".";
+import { InterfaceFunction } from "./proxies";
 
 /**
  * Information about the runtime environment of the running Antelope project.
