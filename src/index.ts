@@ -1,6 +1,11 @@
 import "reflect-metadata";
 import type { Class } from "./decorators";
-import { type InterfaceConnection, internal } from "./internal";
+import { BindResolverFacade } from "./facades";
+import {
+  type ActiveModuleExecutionContext,
+  type InterfaceConnection,
+  internal,
+} from "./internal";
 import { Logging } from "./logging";
 import {
   type AsyncProxy,
@@ -98,14 +103,24 @@ type InterfaceToImpl<T> = T extends infer P
 
 interface AsyncProxyProtocol {
   onCall(callback: Func): unknown;
+  onCallFor(context: ActiveModuleExecutionContext, callback: Func): unknown;
 }
 
 interface RegisteringProxyProtocol {
   onHandlers(register: Func, unregister: Func): unknown;
+  onHandlersFor(
+    context: ActiveModuleExecutionContext,
+    register: Func,
+    unregister: Func,
+  ): unknown;
 }
 
 interface AttachmentPlan {
   attach(): void;
+}
+
+interface InterfaceFunctionDeclaration extends Func {
+  proxy?: unknown;
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -155,19 +170,55 @@ function requireFunction(value: unknown, path: string): Func {
   return value as Func;
 }
 
+function createAsyncAttachmentPlan(
+  proxy: AsyncProxyProtocol,
+  callback: Func,
+  context?: ActiveModuleExecutionContext,
+): AttachmentPlan {
+  return {
+    attach: () => {
+      if (context) {
+        proxy.onCallFor(context, callback);
+        return;
+      }
+      proxy.onCall(callback);
+    },
+  };
+}
+
+function createRegisteringAttachmentPlan(
+  proxy: RegisteringProxyProtocol,
+  register: Func,
+  unregister: Func,
+  context?: ActiveModuleExecutionContext,
+): AttachmentPlan {
+  return {
+    attach: () => {
+      if (context) {
+        proxy.onHandlersFor(context, register, unregister);
+        return;
+      }
+      proxy.onHandlers(register, unregister);
+    },
+  };
+}
+
 function planProxyAttachment(
   proxy: unknown,
   implementation: unknown,
   path: string,
+  context?: ActiveModuleExecutionContext,
 ): AttachmentPlan | undefined {
   if (IsInterfaceProxy(proxy, "event")) {
     return;
   }
   if (IsInterfaceProxy(proxy, "async")) {
     const callback = requireFunction(implementation, path);
-    return {
-      attach: () => (proxy as AsyncProxyProtocol).onCall(callback),
-    };
+    return createAsyncAttachmentPlan(
+      proxy as AsyncProxyProtocol,
+      callback,
+      context,
+    );
   }
   if (!IsInterfaceProxy(proxy, "registering")) {
     return;
@@ -180,43 +231,75 @@ function planProxyAttachment(
     implementation.unregister,
     `${path}.unregister`,
   );
-  return {
-    attach: () =>
-      (proxy as RegisteringProxyProtocol).onHandlers(register, unregister),
-  };
+  return createRegisteringAttachmentPlan(
+    proxy as RegisteringProxyProtocol,
+    register,
+    unregister,
+    context,
+  );
+}
+
+function getDeclaredProxy(declared: unknown): unknown {
+  if (typeof declared === "function" && "proxy" in declared) {
+    return (declared as InterfaceFunctionDeclaration).proxy;
+  }
+  return declared;
+}
+
+function planNestedAttachments(
+  key: string,
+  declared: unknown,
+  implemented: unknown,
+  declaration: Record<string, unknown>,
+  path: string,
+  context?: ActiveModuleExecutionContext,
+): AttachmentPlan[] {
+  if (
+    !isObject(declared) ||
+    IsInterfaceProxy(declared) ||
+    isCommonJsDeclarationMirror(key, declaration, declared)
+  ) {
+    return [];
+  }
+  const nestedImplementation = isObject(implemented) ? implemented : {};
+  return createAttachmentPlan(
+    declared,
+    nestedImplementation,
+    `${path}.${key}`,
+    context,
+  );
 }
 
 function createAttachmentPlan(
   declaration: Record<string, unknown>,
   implementation: Record<string, unknown>,
   path = "implementation",
+  context?: ActiveModuleExecutionContext,
 ): AttachmentPlan[] {
   const plans: AttachmentPlan[] = [];
   for (const [key, declared] of Object.entries(declaration)) {
     const implemented = implementation[key];
-    const proxy =
-      typeof declared === "function" && "proxy" in declared
-        ? (declared as Func & { proxy?: unknown }).proxy
-        : declared;
-    const proxyPlan = planProxyAttachment(proxy, implemented, `${path}.${key}`);
+    const proxy = getDeclaredProxy(declared);
+    const proxyPlan = planProxyAttachment(
+      proxy,
+      implemented,
+      `${path}.${key}`,
+      context,
+    );
     if (proxyPlan) {
       plans.push(proxyPlan);
       continue;
     }
-    if (
-      isObject(declared) &&
-      !IsInterfaceProxy(declared) &&
-      !isCommonJsDeclarationMirror(key, declaration, declared)
-    ) {
-      const nestedImplementation = isObject(implemented) ? implemented : {};
-      plans.push(
-        ...createAttachmentPlan(
-          declared,
-          nestedImplementation,
-          `${path}.${key}`,
-        ),
-      );
-    }
+    plans.push(
+      ...planNestedAttachments(
+        key,
+        declared,
+        implemented,
+        declaration,
+        path,
+        context,
+      ),
+    );
   }
   return plans;
 }
@@ -224,6 +307,7 @@ function createAttachmentPlan(
 function attachImplementation(
   declaration: Record<string, unknown>,
   implementation: Record<string, unknown>,
+  context?: ActiveModuleExecutionContext,
 ) {
   if (!isObject(declaration) || !isObject(implementation)) {
     throw new TypeError(
@@ -232,7 +316,12 @@ function attachImplementation(
   }
   assertAcyclic(declaration, "declaration");
   assertAcyclic(implementation, "implementation");
-  const plans = createAttachmentPlan(declaration, implementation);
+  const plans = createAttachmentPlan(
+    declaration,
+    implementation,
+    "implementation",
+    context,
+  );
   plans.forEach((plan) => {
     plan.attach();
   });
@@ -293,6 +382,38 @@ export function ImplementInterface<
   return { declaration: decl, implementation: impl as T2 };
 }
 
+BindResolverFacade(ImplementInterface, (scope) => {
+  const context = scope.context as ActiveModuleExecutionContext;
+  return ((
+    declaration: Record<string, unknown> | PromiseLike<Record<string, unknown>>,
+    implementation:
+      | Record<string, unknown>
+      | PromiseLike<Record<string, unknown>>,
+  ) => {
+    if (isThenable(declaration) || isThenable(implementation)) {
+      return Promise.all([declaration, implementation]).then(([decl, impl]) => {
+        attachImplementation(decl, impl, context);
+        return { declaration: decl, implementation: impl };
+      });
+    }
+    attachImplementation(declaration, implementation, context);
+    return { declaration, implementation };
+  }) as typeof ImplementInterface;
+});
+
+BindResolverFacade(GetResponsibleModule, (scope) => {
+  return ((_startFrame?: number) =>
+    scope.context.module) as typeof GetResponsibleModule;
+});
+
+function getInterfaceInstancesFor(
+  module: string | undefined,
+  interfaceID: string,
+): InterfaceConnection[] {
+  if (!module || !(module in internal.interfaceConnections)) return [];
+  return internal.interfaceConnections[module][interfaceID] ?? [];
+}
+
 /**
  * Gets all instances of a specific interface across the system.
  *
@@ -304,10 +425,16 @@ export function ImplementInterface<
 export function GetInterfaceInstances(
   interfaceID: string,
 ): InterfaceConnection[] {
-  const module = GetResponsibleModule();
-  if (!module || !(module in internal.interfaceConnections)) return [];
-  return internal.interfaceConnections[module][interfaceID] ?? [];
+  return getInterfaceInstancesFor(GetResponsibleModule(), interfaceID);
 }
+
+BindResolverFacade(GetInterfaceInstances, (scope) => {
+  return ((interfaceID: string) =>
+    getInterfaceInstancesFor(
+      scope.context.module,
+      interfaceID,
+    )) as typeof GetInterfaceInstances;
+});
 
 /**
  * Gets a specific instance of an interface by ID.
@@ -322,13 +449,31 @@ export function GetInterfaceInstance(
   interfaceID: string,
   connectionID: string,
 ): InterfaceConnection | undefined {
-  const module = GetResponsibleModule();
-  if (!module || !(module in internal.interfaceConnections)) return;
-  const connections = internal.interfaceConnections[module];
-  return (connections[interfaceID] ?? []).find(
+  return getInterfaceInstanceFor(
+    GetResponsibleModule(),
+    interfaceID,
+    connectionID,
+  );
+}
+
+function getInterfaceInstanceFor(
+  module: string | undefined,
+  interfaceID: string,
+  connectionID: string,
+): InterfaceConnection | undefined {
+  return getInterfaceInstancesFor(module, interfaceID).find(
     (connection) => connection.id === connectionID,
   );
 }
+
+BindResolverFacade(GetInterfaceInstance, (scope) => {
+  return ((interfaceID: string, connectionID: string) =>
+    getInterfaceInstanceFor(
+      scope.context.module,
+      interfaceID,
+      connectionID,
+    )) as typeof GetInterfaceInstance;
+});
 
 export {
   DestroyModule,

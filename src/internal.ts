@@ -62,10 +62,12 @@ export interface InterfaceRuntime {
     dir: string;
     id: string;
     isImplementor?: boolean;
+    context?: ActiveModuleExecutionContext;
   }>;
   testStubMode: boolean;
   knownAsync: Map<string, Set<RuntimeCleanup | { detach(): void }>>;
   knownRegisters: Map<string, Set<RuntimeCleanup | { detach(): void }>>;
+  ownerCleanups: Map<string, Set<() => void>>;
   registeringProxies: Set<{
     unregisterModule(module: string): void;
     unregisterOwner(owner: string): void;
@@ -93,6 +95,7 @@ export interface InterfaceRuntime {
     module: string,
     proxy: RuntimeCleanup | { detach(): void },
   ): void;
+  addOwnerCleanup(owner: string, cleanup: () => void): void;
 }
 
 function addToMapSet<T>(map: Map<string, Set<T>>, key: string, value: T) {
@@ -108,6 +111,7 @@ function createRuntime(): InterfaceRuntime {
     testStubMode: false,
     knownAsync: new Map(),
     knownRegisters: new Map(),
+    ownerCleanups: new Map(),
     registeringProxies: new Set(),
     knownEvents: new Set(),
     interfaceConnections: Object.create(null) as Record<
@@ -127,6 +131,9 @@ function createRuntime(): InterfaceRuntime {
     addRegisteringProxy(module, proxy) {
       addToMapSet(runtime.knownRegisters, module, proxy);
     },
+    addOwnerCleanup(owner, cleanup) {
+      addToMapSet(runtime.ownerCleanups, owner, cleanup);
+    },
   };
   return runtime;
 }
@@ -141,6 +148,10 @@ function getRuntime(): InterfaceRuntime {
   }
   if (existing) {
     existing.moduleOwners ??= new Map();
+    existing.ownerCleanups ??= new Map();
+    existing.addOwnerCleanup ??= (owner, cleanup) => {
+      addToMapSet(existing.ownerCleanups, owner, cleanup);
+    };
     return existing;
   }
   const runtime = createRuntime();

@@ -4,10 +4,13 @@ import {
   ProviderQueueFullError,
 } from "./errors";
 import {
+  type ActiveModuleExecutionContext,
+  assertActiveModuleContext,
   captureModuleContext,
   getModuleContext,
   internal,
   invalidateModuleContext,
+  type ModuleExecutionContext,
   type ProxyBrand,
   RUNTIME_PROTOCOL_VERSION,
   runWithCapturedModuleContext,
@@ -144,18 +147,36 @@ export function GetInterfaceProxyIdentity(value: unknown): string | undefined {
   return readBrand(value)?.identity;
 }
 
+interface ExecutionContextResolution {
+  context?: ModuleExecutionContext;
+  ambient: boolean;
+}
+
+function resolveExecutionContext(useStack = true): ExecutionContextResolution {
+  const ambientContext = getModuleContext();
+  if (ambientContext) {
+    return { context: ambientContext, ambient: true };
+  }
+  return {
+    context: useStack ? getResponsibleModuleContext() : undefined,
+    ambient: false,
+  };
+}
+
 function getAttachmentRoute(manualDetach?: boolean) {
-  const context = getModuleContext();
-  const responsible =
-    manualDetach || context?.module ? undefined : GetResponsibleModule();
-  const owner =
-    context?.owner ?? context?.module ?? responsible ?? DEFAULT_PROVIDER;
+  const { context } = resolveExecutionContext(!manualDetach);
+  const owner = context?.owner ?? context?.module ?? DEFAULT_PROVIDER;
   return { owner, provider: context?.provider ?? owner };
 }
 
-function getRequestedProvider(proxyIdentity: string) {
-  const context = getModuleContext();
-  return context?.providerRoutes?.[proxyIdentity] ?? context?.provider;
+function getRequestedProvider(
+  proxyIdentity: string,
+  resolution = resolveExecutionContext(),
+) {
+  return (
+    resolution.context?.providerRoutes?.[proxyIdentity] ??
+    (resolution.ambient ? resolution.context?.provider : undefined)
+  );
 }
 
 function bindProviderCallback<T extends Func>(callback: T): T {
@@ -172,13 +193,38 @@ interface ExecutionOwnership {
   owner?: string;
 }
 
-function getExecutionOwnership(): ExecutionOwnership {
-  const context = getModuleContext();
+function getExecutionOwnership(
+  context = resolveExecutionContext().context,
+): ExecutionOwnership {
   if (context) {
     return { module: context.module, owner: context.owner ?? context.module };
   }
-  const module = GetResponsibleModule();
-  return { module, owner: module };
+  return {};
+}
+
+function getScopedAttachmentRoute(
+  context: ActiveModuleExecutionContext,
+): AttachmentRoute {
+  assertActiveModuleContext(context);
+  return {
+    owner: context.owner,
+    provider: context.provider ?? context.module,
+  };
+}
+
+function getScopedProvider(
+  proxyIdentity: string,
+  context: ActiveModuleExecutionContext,
+): string | undefined {
+  assertActiveModuleContext(context);
+  return context.providerRoutes?.[proxyIdentity];
+}
+
+function getScopedOwnership(
+  context: ActiveModuleExecutionContext,
+): Required<ExecutionOwnership> {
+  assertActiveModuleContext(context);
+  return { module: context.module, owner: context.owner };
 }
 
 function selectProvider<T>(
@@ -255,10 +301,30 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
   /** Attaches a provider callback and replays compatible queued calls. */
   public onCall(callback: T, manualDetach?: boolean): AttachmentLease {
     const route = getAttachmentRoute(manualDetach);
+    return this.attachCall(route, bindProviderCallback(callback), manualDetach);
+  }
+
+  /** @internal Attaches a provider selected lexically by the module resolver. */
+  public onCallFor(
+    context: ActiveModuleExecutionContext,
+    callback: T,
+    manualDetach?: boolean,
+  ): AttachmentLease {
+    return this.attachCall(
+      getScopedAttachmentRoute(context),
+      callback,
+      manualDetach,
+    );
+  }
+
+  private attachCall(
+    route: AttachmentRoute,
+    callback: T,
+    manualDetach?: boolean,
+  ): AttachmentLease {
     const lease = { ...route, generation: internal.nextLeaseGeneration++ };
-    const providerCallback = bindProviderCallback(callback);
     this.state.callbacks.set(route.provider, {
-      callback: providerCallback,
+      callback,
       ...lease,
     });
     if (!manualDetach) {
@@ -266,7 +332,7 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
         cleanup: () => this.detach(lease),
       });
     }
-    this.replayQueue(route.provider, providerCallback);
+    this.replayQueue(route.provider, callback);
     return lease;
   }
 
@@ -324,6 +390,21 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
       return this.invoke(attachment.callback, args);
     }
     return this.enqueue(args, requested);
+  }
+
+  /** @internal Calls the provider selected lexically by the module resolver. */
+  public callFor(
+    context: ActiveModuleExecutionContext,
+    ...args: Parameters<T>
+  ): Promise<R> {
+    try {
+      return this.callProvider(
+        getScopedProvider(this[PROXY_BRAND].identity, context),
+        ...args,
+      );
+    } catch (error) {
+      return Promise.reject(error);
+    }
   }
 
   private enqueue(args: Parameters<T>, requested: string | undefined) {
@@ -438,16 +519,43 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
     manualDetach?: boolean,
   ): AttachmentLease {
     const route = getAttachmentRoute(manualDetach);
+    return this.attachHandlers(
+      route,
+      bindProviderCallback(register),
+      bindProviderCallback(unregister),
+      manualDetach,
+    );
+  }
+
+  /** @internal Attaches handlers selected lexically by the module resolver. */
+  public onHandlersFor(
+    context: ActiveModuleExecutionContext,
+    register: T,
+    unregister: (id: RID<T>) => void,
+    manualDetach?: boolean,
+  ): AttachmentLease {
+    return this.attachHandlers(
+      getScopedAttachmentRoute(context),
+      register,
+      unregister,
+      manualDetach,
+    );
+  }
+
+  private attachHandlers(
+    route: AttachmentRoute,
+    register: T,
+    unregister: (id: RID<T>) => void,
+    manualDetach?: boolean,
+  ): AttachmentLease {
     const lease = this.createLease(route);
-    const boundRegister = bindProviderCallback(register);
-    const boundUnregister = bindProviderCallback(unregister);
     this.state.callbacks.set(route.provider, {
       provider: route.provider,
-      register: this.createAttachment(boundRegister, lease, manualDetach),
-      unregister: this.createAttachment(boundUnregister, lease, manualDetach),
+      register: this.createAttachment(register, lease, manualDetach),
+      unregister: this.createAttachment(unregister, lease, manualDetach),
     });
     this.trackAttachment(lease, Boolean(manualDetach));
-    this.replayRegistrations(route.provider, boundRegister);
+    this.replayRegistrations(route.provider, register);
     return lease;
   }
 
@@ -474,12 +582,51 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
 
   /** Registers an entry with the selected provider or queues it for bootstrap. */
   public register(id: RID<T>, ...args: RArgs<T>) {
-    const requested = getRequestedProvider(this[PROXY_BRAND].identity);
+    const resolution = resolveExecutionContext();
+    const requested = getRequestedProvider(
+      this[PROXY_BRAND].identity,
+      resolution,
+    );
+    this.registerWith(
+      requested,
+      getExecutionOwnership(resolution.context),
+      true,
+      id,
+      ...args,
+    );
+  }
+
+  /** @internal Registers through a route selected lexically by the resolver. */
+  public registerFor(
+    context: ActiveModuleExecutionContext,
+    id: RID<T>,
+    ...args: RArgs<T>
+  ) {
+    const requested = getScopedProvider(this[PROXY_BRAND].identity, context);
+    this.registerWith(
+      requested,
+      getScopedOwnership(context),
+      requested !== undefined,
+      id,
+      ...args,
+    );
+  }
+
+  private registerWith(
+    requested: string | undefined,
+    ownership: ExecutionOwnership,
+    queueIfMissing: boolean,
+    id: RID<T>,
+    ...args: RArgs<T>
+  ) {
     const callback = selectProvider(
       this.state.callbacks,
       this[PROXY_BRAND].identity,
       requested,
     );
+    if (!callback && !queueIfMissing) {
+      return;
+    }
     if (!callback && internal.testStubMode) {
       throw new MissingProviderError();
     }
@@ -493,7 +640,6 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
         internal.maxPendingOperations,
       );
     }
-    const ownership = getExecutionOwnership();
     this.state.registered.set(id, {
       ...ownership,
       provider: requested ?? callback?.provider,
@@ -518,6 +664,12 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
     } finally {
       this.state.registered.delete(id);
     }
+  }
+
+  /** @internal Unregisters through a live lexical resolver scope. */
+  public unregisterFor(context: ActiveModuleExecutionContext, id: RID<T>) {
+    assertActiveModuleContext(context);
+    this.unregister(id);
   }
 
   /** Unregisters every entry owned by a destroyed module. */
@@ -661,10 +813,20 @@ export class EventProxy<T extends EventFunction = EventFunction> {
 
   /** Registers a handler once. */
   public register(func: T) {
+    const { context } = resolveExecutionContext();
+    this.registerWith(getExecutionOwnership(context), func);
+  }
+
+  /** @internal Registers a handler owned lexically by the resolver scope. */
+  public registerFor(context: ActiveModuleExecutionContext, func: T) {
+    this.registerWith(getScopedOwnership(context), func);
+  }
+
+  private registerWith(ownership: ExecutionOwnership, func: T) {
     if (this.state.registered.some((existing) => existing.func === func)) {
       return;
     }
-    this.state.registered.push({ ...getExecutionOwnership(), func });
+    this.state.registered.push({ ...ownership, func });
   }
 
   /** Unregisters a handler. */
@@ -672,6 +834,12 @@ export class EventProxy<T extends EventFunction = EventFunction> {
     this.state.registered = this.state.registered.filter(
       ({ func }) => func !== fn,
     );
+  }
+
+  /** @internal Unregisters through a live lexical resolver scope. */
+  public unregisterFor(context: ActiveModuleExecutionContext, fn: T) {
+    assertActiveModuleContext(context);
+    this.unregister(fn);
   }
 
   /** Unregisters handlers owned by a destroyed module. */
@@ -689,17 +857,38 @@ export class EventProxy<T extends EventFunction = EventFunction> {
   }
 }
 
-function captureCallStack(startFrame = 0): NodeJS.CallSite[] {
+function captureCallStack(
+  constructorOpt: (...args: any[]) => any,
+  startFrame = 0,
+): NodeJS.CallSite[] {
   const oldHandler = Error.prepareStackTrace;
   const oldLimit = Error.stackTraceLimit;
   Error.stackTraceLimit = Infinity;
   Error.prepareStackTrace = (_, trace) => trace;
   const error = {} as { stack: string[] };
-  Error.captureStackTrace(error, GetResponsibleModule);
+  Error.captureStackTrace(error, constructorOpt);
   const trace = error.stack as unknown as NodeJS.CallSite[];
   Error.prepareStackTrace = oldHandler;
   Error.stackTraceLimit = oldLimit;
   return trace.slice(startFrame);
+}
+
+function getResponsibleModuleContext(
+  startFrame = 0,
+): ModuleExecutionContext | undefined {
+  const trace = captureCallStack(getResponsibleModuleContext, startFrame);
+  const responsible = findResponsibleFile(trace);
+  if (responsible.context) {
+    assertActiveModuleContext(responsible.context);
+    return responsible.context;
+  }
+  if (responsible.module) {
+    return { module: responsible.module, owner: responsible.module };
+  }
+  internal.asyncContextReporter?.(trace);
+  return responsible.lastInterface
+    ? { module: responsible.lastInterface, owner: responsible.lastInterface }
+    : undefined;
 }
 
 /** Gets the responsible module from explicit async context or the call stack. */
@@ -708,7 +897,7 @@ export function GetResponsibleModule(startFrame = 0): string | undefined {
   if (contextModule) {
     return contextModule;
   }
-  const trace = captureCallStack(startFrame);
+  const trace = captureCallStack(GetResponsibleModule, startFrame);
   const responsible = findResponsibleFile(trace);
   if (responsible.module) {
     return responsible.module;

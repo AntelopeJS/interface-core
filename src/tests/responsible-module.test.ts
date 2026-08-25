@@ -1,4 +1,5 @@
 import { expect } from "chai";
+import { activateModuleContext } from "../internal";
 import {
   findResponsibleFile,
   type ModuleFolderEntry,
@@ -29,6 +30,23 @@ describe("findResponsibleFile", () => {
     expect(findResponsibleFile(trace, entries).module).to.equal("local");
   });
 
+  it("accepts a tracked module installed beneath node_modules", () => {
+    const entries: ModuleFolderEntry[] = [
+      {
+        id: "api",
+        dir: "/app/node_modules/.pnpm/@antelopejs+api/node_modules/@antelopejs/api",
+        isImplementor: true,
+      },
+    ];
+    const trace = [
+      frame(
+        "/app/node_modules/.pnpm/@antelopejs+api/node_modules/@antelopejs/api/dist/middleware.js",
+      ),
+    ];
+
+    expect(findResponsibleFile(trace, entries).module).to.equal("api");
+  });
+
   it("skips non-loader node:internal frames", () => {
     const entries: ModuleFolderEntry[] = [{ id: "local", dir: "/app" }];
     const trace = [
@@ -41,9 +59,18 @@ describe("findResponsibleFile", () => {
   });
 
   it("returns the first non-implementor match even when an implementor appears earlier", () => {
+    const context = activateModuleContext({
+      module: "playground",
+      owner: "playground#1",
+      providerRoutes: { route: "provider" },
+    });
     const entries: ModuleFolderEntry[] = [
       { id: "cms", dir: "/project/cms", isImplementor: true },
-      { id: "playground", dir: "/project/cms/playground" },
+      {
+        id: "playground",
+        dir: "/project/cms/playground",
+        context,
+      },
     ];
     const trace = [
       frame("/project/cms/dist/interfaces/cms/page.js"),
@@ -51,7 +78,9 @@ describe("findResponsibleFile", () => {
       frame("/project/cms/playground/dist/table-view/drawer/page.js"),
     ];
 
-    expect(findResponsibleFile(trace, entries).module).to.equal("playground");
+    const result = findResponsibleFile(trace, entries);
+    expect(result.module).to.equal("playground");
+    expect(result.context).to.equal(context);
   });
 
   it("falls back to the first implementor match when no consumer frame matches", () => {

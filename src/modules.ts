@@ -14,8 +14,8 @@ import { EventProxy, InterfaceFunction } from "./proxies";
  * Runs work with module ownership and provider routing across asynchronous work.
  *
  * This is an infrastructure API for AntelopeJS Core and custom module loaders.
- * Application modules should rely on the context installed by Core and use
- * `importOverrides` to select providers instead of calling this function.
+ * Application modules should rely on resolver-selected interface imports and
+ * use `importOverrides` instead of calling this function.
  */
 export function RunWithModuleContext<T>(
   context: ModuleExecutionContext,
@@ -87,9 +87,9 @@ export namespace Events {
    *
    * @param module Module ID
    */
-  export const ModuleDestroyed = new EventProxy<(module: string) => void>(
-    "modules.ModuleDestroyed",
-  );
+  export const ModuleDestroyed = new EventProxy<
+    (module: string, owner?: string) => void
+  >("modules.ModuleDestroyed");
 }
 
 function runCleanup(
@@ -108,7 +108,10 @@ function runCleanup(
   }
 }
 
-function getDestroyedOwners(module: string): string[] {
+function getDestroyedOwners(module: string, owner?: string): string[] {
+  if (owner) {
+    return [owner];
+  }
   const context = peekModuleContext();
   if (context?.module === module) {
     return [context.owner ?? module];
@@ -118,6 +121,10 @@ function getDestroyedOwners(module: string): string[] {
 
 function cleanupDestroyedOwner(module: string, owner: string) {
   invalidateModuleContext(owner);
+  for (const cleanup of internal.ownerCleanups.get(owner) ?? []) {
+    runCleanup({ cleanup }, owner, "cleanup-owner");
+  }
+  internal.ownerCleanups.delete(owner);
   for (const cleanup of internal.knownAsync.get(owner) ?? []) {
     runCleanup(cleanup, owner, "detach-async-provider");
   }
@@ -148,8 +155,8 @@ function cleanupDestroyedOwner(module: string, owner: string) {
   }
 }
 
-Events.ModuleDestroyed.register((module) => {
-  getDestroyedOwners(module).forEach((owner) => {
+Events.ModuleDestroyed.register((module, destroyedOwner) => {
+  getDestroyedOwners(module, destroyedOwner).forEach((owner) => {
     cleanupDestroyedOwner(module, owner);
   });
 });

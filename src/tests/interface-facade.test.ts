@@ -1,9 +1,11 @@
 import { expect } from "chai";
+import * as InterfaceCore from "..";
 import { InterfaceFunction } from "..";
 import { ModuleContextInvalidatedError } from "../errors";
 import { CreateInterfaceFacade, type InterfaceFacadeScope } from "../facades";
 import {
   Events,
+  GetModuleContext,
   type ModuleExecutionContext,
   RunWithModuleContext,
 } from "../modules";
@@ -31,6 +33,56 @@ function consumerContext(
 }
 
 describe("interface facades", () => {
+  it("does not queue registrations without a selected provider", () => {
+    const Registrations = new InterfaceCore.RegisteringProxy<
+      (id: string) => void
+    >("facade.optional-registrations");
+    const facade = CreateInterfaceFacade(
+      { Registrations },
+      { module: "optional-consumer", owner: "optional-consumer#1" },
+    );
+    const replayed: string[] = [];
+
+    facade.Registrations.register("before-provider");
+    const lease = Registrations.onRegister((id) => replayed.push(id), true);
+    facade.Registrations.register("after-provider");
+
+    expect(replayed).to.deep.equal(["after-provider"]);
+    Registrations.detach(lease);
+  });
+
+  it("attaches and calls providers without restoring ambient callback context", async () => {
+    const Read = InterfaceFunction<() => string>("facade.LexicalRead");
+    const providerCore = CreateInterfaceFacade(
+      InterfaceCore,
+      providerContext("provider"),
+    );
+    const consumer = CreateInterfaceFacade(
+      { Read },
+      consumerContext(
+        "consumer#lexical",
+        "async:facade.LexicalRead",
+        "provider",
+      ),
+    );
+    let callbackContext: ModuleExecutionContext | undefined;
+
+    providerCore.ImplementInterface(
+      { Read },
+      {
+        Read: () => {
+          callbackContext = GetModuleContext();
+          return "value";
+        },
+      },
+    );
+
+    expect(await Promise.resolve().then(() => consumer.Read())).to.equal(
+      "value",
+    );
+    expect(callbackContext).to.equal(undefined);
+  });
+
   it("automatically binds root and namespace functions to each provider", async () => {
     const Call = InterfaceFunction<(value: string) => string>("facade.Call");
     const NestedCall =
@@ -96,7 +148,7 @@ describe("interface facades", () => {
         facade: Record<string, unknown>,
       ) => {
         const boundCall = facade.Call as typeof Call;
-        const owner = scope.run(() => scope.context.owner);
+        const owner = scope.context.owner;
         return { Read: () => boundCall(), ReadOwner: () => owner };
       },
       Call,
@@ -110,6 +162,52 @@ describe("interface facades", () => {
 
     expect(await facade.Read()).to.equal("value");
     expect(facade.ReadOwner()).to.equal("consumer#cold");
+  });
+
+  it("lets custom registration APIs clean only the destroyed facade generation", () => {
+    const entries: Array<{ callback: () => void; owner: string }> = [];
+    const declaration = {
+      BuildInterfaceFacade: (scope: InterfaceFacadeScope) => {
+        const owner = scope.context.owner as string;
+        scope.onDestroy(() => {
+          const retained = entries.filter((entry) => entry.owner !== owner);
+          entries.splice(0, entries.length, ...retained);
+        });
+        return {
+          Register: (callback: () => void) => {
+            scope.assertActive();
+            entries.push({ callback, owner });
+          },
+        };
+      },
+      Register: (_callback: () => void) => undefined,
+    };
+    const staleContext = {
+      module: "consumer",
+      owner: "consumer#custom-old",
+    };
+    const currentContext = {
+      module: "consumer",
+      owner: "consumer#custom-new",
+    };
+    const stale = CreateInterfaceFacade(declaration, staleContext);
+    const current = CreateInterfaceFacade(declaration, currentContext);
+    const calls: string[] = [];
+
+    stale.Register(() => calls.push("old"));
+    current.Register(() => calls.push("new"));
+    Events.ModuleDestroyed.emit("consumer", staleContext.owner);
+    entries.forEach(({ callback }) => {
+      callback();
+    });
+
+    expect(calls).to.deep.equal(["new"]);
+    expect(() => stale.Register(() => undefined)).to.throw(
+      ModuleContextInvalidatedError,
+    );
+    expect(() => current.Register(() => undefined)).not.to.throw();
+
+    Events.ModuleDestroyed.emit("consumer", currentContext.owner);
   });
 
   it("returns declarations unchanged when they need no facade", () => {
@@ -147,5 +245,53 @@ describe("interface facades", () => {
     expect(() => CreateInterfaceFacade({ Call }, context)).to.throw(
       ModuleContextInvalidatedError,
     );
+  });
+
+  it("rejects unregisters from an invalidated facade generation", () => {
+    const Registrations = new InterfaceCore.RegisteringProxy<
+      (id: string) => void
+    >("facade.StaleRegistration");
+    const EventsProxy = new InterfaceCore.EventProxy<() => void>(
+      "facade.StaleEvent",
+    );
+    const removed: string[] = [];
+    Registrations.onHandlers(
+      () => undefined,
+      (id) => removed.push(id),
+      true,
+    );
+    const staleContext = {
+      module: "consumer",
+      owner: "consumer#stale-unregister",
+    };
+    const currentContext = {
+      module: "consumer",
+      owner: "consumer#current-unregister",
+    };
+    const stale = CreateInterfaceFacade(
+      { EventsProxy, Registrations },
+      staleContext,
+    );
+    const current = CreateInterfaceFacade(
+      { EventsProxy, Registrations },
+      currentContext,
+    );
+    const listener = () => undefined;
+    RunWithModuleContext(staleContext, () =>
+      Events.ModuleDestroyed.emit("consumer"),
+    );
+    current.Registrations.register("current");
+    current.EventsProxy.register(listener);
+
+    expect(() => stale.Registrations.unregister("current")).to.throw(
+      ModuleContextInvalidatedError,
+    );
+    expect(() => stale.EventsProxy.unregister(listener)).to.throw(
+      ModuleContextInvalidatedError,
+    );
+
+    current.Registrations.unregister("current");
+    current.EventsProxy.unregister(listener);
+    expect(removed).to.deep.equal(["current"]);
   });
 });
