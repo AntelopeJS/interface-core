@@ -112,6 +112,20 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function isCommonJsDeclarationMirror(
+  key: string,
+  parent: Record<string, unknown>,
+  child: Record<string, unknown>,
+): boolean {
+  if (key !== "default") {
+    return false;
+  }
+  const entries = Object.entries(child);
+  return (
+    entries.length > 0 && entries.every(([key, value]) => parent[key] === value)
+  );
+}
+
 function assertAcyclic(value: unknown, label: string) {
   const visited = new WeakSet<object>();
   const active = new WeakSet<object>();
@@ -189,7 +203,11 @@ function createAttachmentPlan(
       plans.push(proxyPlan);
       continue;
     }
-    if (isObject(declared) && !IsInterfaceProxy(declared)) {
+    if (
+      isObject(declared) &&
+      !IsInterfaceProxy(declared) &&
+      !isCommonJsDeclarationMirror(key, declaration, declared)
+    ) {
       const nestedImplementation = isObject(implemented) ? implemented : {};
       plans.push(
         ...createAttachmentPlan(

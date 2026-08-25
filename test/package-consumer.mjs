@@ -41,11 +41,11 @@ import {
   type InterfaceConnection,
 } from "@antelopejs/interface-core";
 import {
-  BindToCurrentModuleContext,
   GetModuleContext,
   type ModuleExecutionContext,
   RunWithModuleContext,
 } from "@antelopejs/interface-core/modules";
+import { CreateInterfaceFacade } from "@antelopejs/interface-core/facades";
 
 const connection: InterfaceConnection = {
   path: "example",
@@ -58,7 +58,7 @@ const context: ModuleExecutionContext = {
 };
 void connection;
 void context;
-void BindToCurrentModuleContext;
+void CreateInterfaceFacade;
 void GetModuleContext;
 void GetRuntimeInfo;
 void ListModules;
@@ -67,6 +67,7 @@ void RunWithModuleContext;
 
 const rootFirstImports = `
 const core = require("@antelopejs/interface-core");
+const facades = require("@antelopejs/interface-core/facades");
 const modules = require("@antelopejs/interface-core/modules");
 const runtime = require("@antelopejs/interface-core/runtime");
 `;
@@ -74,6 +75,7 @@ const runtime = require("@antelopejs/interface-core/runtime");
 const subpathsFirstImports = `
 const modules = require("@antelopejs/interface-core/modules");
 const runtime = require("@antelopejs/interface-core/runtime");
+const facades = require("@antelopejs/interface-core/facades");
 const core = require("@antelopejs/interface-core");
 `;
 
@@ -87,10 +89,10 @@ assert.equal(core.GetRuntimeInfo, runtime.GetRuntimeInfo);
 assert.equal(core.RegisterDevServer, runtime.RegisterDevServer);
 assert.equal(core.ListModules, modules.ListModules);
 assert.equal(core.Events, modules.Events);
-assert.equal(core.BindToCurrentModuleContext, undefined);
+assert.equal(core.CreateInterfaceFacade, undefined);
 assert.equal(core.GetModuleContext, undefined);
 assert.equal(core.RunWithModuleContext, undefined);
-assert.equal(typeof modules.BindToCurrentModuleContext, "function");
+assert.equal(typeof facades.CreateInterfaceFacade, "function");
 assert.equal(typeof modules.GetModuleContext, "function");
 assert.equal(typeof modules.RunWithModuleContext, "function");
 assert.equal(core.IsInterfaceProxy(core.GetRuntimeInfo.proxy), true);
@@ -118,9 +120,12 @@ modules.RunWithModuleContext(providerContext, () => {
 
 (async () => {
   const oldContext = await modules.RunWithModuleContext(consumerContext, () => proxy());
+  const facade = facades.CreateInterfaceFacade({ GetValue: proxy }, consumerContext);
+  const facadeContext = await facade.GetValue();
   assert.equal(oldContext.module, "provider");
   assert.equal(oldContext.owner, "provider#old");
   assert.equal(oldContext.provider, "provider");
+  assert.deepEqual(facadeContext, oldContext);
 
   modules.RunWithModuleContext(
     { module: "provider", owner: "provider#new", provider: "provider" },
@@ -133,6 +138,7 @@ modules.RunWithModuleContext(providerContext, () => {
   });
   const replacement = await modules.RunWithModuleContext(consumerContext, () => proxy());
   assert.equal(replacement, "provider#new");
+  assert.equal(await facade.GetValue(), "provider#new");
 
   internal.interfaceConnections.consumer = {
     example: [{ path: "example", provider: "provider", selected: true }],

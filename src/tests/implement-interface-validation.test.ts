@@ -37,6 +37,17 @@ describe("ImplementInterface validation", () => {
     ).to.throw("implementation.proxy.unregister");
   });
 
+  it("ignores CommonJS namespace mirrors", async () => {
+    const proxy = new AsyncProxy<() => string>("test.commonjs-mirror");
+    const declaration = { proxy };
+
+    ImplementInterface({ ...declaration, default: declaration }, {
+      proxy: () => "value",
+    } as never);
+
+    expect(await proxy.call()).to.equal("value");
+  });
+
   it("rejects cycles in declarations and implementations", () => {
     const declaration: Record<string, unknown> = {};
     declaration.self = declaration;

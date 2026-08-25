@@ -1,5 +1,4 @@
 import {
-  captureModuleContext,
   getModuleContext,
   getModuleOwners,
   internal,
@@ -7,12 +6,9 @@ import {
   type ModuleExecutionContext,
   peekModuleContext,
   type RuntimeCleanup,
-  runWithCapturedModuleContext,
   runWithModuleContext,
 } from "./internal";
 import { EventProxy, InterfaceFunction } from "./proxies";
-
-type ModuleCallback<A extends any[] = any[], R = any> = (...args: A) => R;
 
 /**
  * Runs work with module ownership and provider routing across asynchronous work.
@@ -36,36 +32,6 @@ export function RunWithModuleContext<T>(
  */
 export function GetModuleContext(): ModuleExecutionContext | undefined {
   return getModuleContext();
-}
-
-/**
- * Binds a callback to the active module generation and provider routes.
- *
- * Interface authors should bind callbacks received from a consumer when a
- * provider will invoke them from its own execution context, either immediately
- * or later. Ordinary module lifecycle and interface calls are already managed
- * by Core and the proxy runtime and do not need explicit binding.
- */
-export function BindToCurrentModuleContext<T extends ModuleCallback>(
-  callback: T,
-): T {
-  const context = captureModuleContext();
-  if (!context) {
-    return callback;
-  }
-  const bound = function (
-    this: ThisParameterType<T>,
-    ...args: Parameters<T>
-  ): ReturnType<T> {
-    return runWithCapturedModuleContext(context, () =>
-      callback.apply(this, args),
-    );
-  };
-  Object.defineProperty(bound, "name", {
-    configurable: true,
-    value: callback.name,
-  });
-  return bound as T;
 }
 
 export type { ModuleExecutionContext } from "./internal";

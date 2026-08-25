@@ -302,6 +302,31 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
     if (attachment) {
       return this.invoke(attachment.callback, args);
     }
+    return this.enqueue(args, requested);
+  }
+
+  /** @internal Calls one explicitly selected provider for a resolver facade. */
+  public callProvider(
+    requested: string | undefined,
+    ...args: Parameters<T>
+  ): Promise<R> {
+    let attachment: Attachment<T> | undefined;
+    try {
+      attachment = selectProvider(
+        this.state.callbacks,
+        this[PROXY_BRAND].identity,
+        requested,
+      );
+    } catch (error) {
+      return Promise.reject(error);
+    }
+    if (attachment) {
+      return this.invoke(attachment.callback, args);
+    }
+    return this.enqueue(args, requested);
+  }
+
+  private enqueue(args: Parameters<T>, requested: string | undefined) {
     if (internal.testStubMode) {
       return Promise.reject(new MissingProviderError());
     }
@@ -339,11 +364,19 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
   }
 }
 
+export interface InterfaceFunctionProxy<
+  T extends Func = Func,
+  R = Awaited<ReturnType<T>>,
+> {
+  (...args: Parameters<T>): Promise<R>;
+  proxy: AsyncProxy<T, R>;
+}
+
 /** Creates an interface function backed by an asynchronous proxy. */
 export function InterfaceFunction<
   T extends Func = Func,
   R = Awaited<ReturnType<T>>,
->(identity?: string): (...args: Parameters<T>) => Promise<R> {
+>(identity?: string): InterfaceFunctionProxy<T, R> {
   const proxy = new AsyncProxy<T, R>(identity);
   const func = (...args: Parameters<T>) => proxy.call(...args);
   func.proxy = proxy;

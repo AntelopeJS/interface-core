@@ -28,7 +28,7 @@ export interface ModuleExecutionContext {
   providerRoutes?: Readonly<Record<string, string>>;
 }
 
-interface ActiveModuleExecutionContext extends ModuleExecutionContext {
+export interface ActiveModuleExecutionContext extends ModuleExecutionContext {
   owner: string;
   ownershipToken: symbol;
 }
@@ -170,12 +170,29 @@ function trackModuleOwner(module: string, owner: string) {
   addToMapSet(internal.moduleOwners, module, owner);
 }
 
-function assertActiveModuleContext(context: ActiveModuleExecutionContext) {
+export function assertActiveModuleContext(
+  context: ActiveModuleExecutionContext,
+) {
   if (
     internal.activeOwnerTokens.get(context.owner) !== context.ownershipToken
   ) {
     throw new ModuleContextInvalidatedError(context.module);
   }
+}
+
+export function activateModuleContext(
+  context: ModuleExecutionContext,
+): ActiveModuleExecutionContext {
+  if (!context.module) {
+    throw new Error("Module execution context requires a module ID.");
+  }
+  const owner = context.owner ?? context.module;
+  trackModuleOwner(context.module, owner);
+  return {
+    ...context,
+    owner,
+    ownershipToken: getOwnerToken(owner),
+  };
 }
 
 export function runWithModuleContext<T>(
@@ -186,16 +203,7 @@ export function runWithModuleContext<T>(
   if (inheritedContext) {
     assertActiveModuleContext(inheritedContext);
   }
-  if (!context.module) {
-    throw new Error("Module execution context requires a module ID.");
-  }
-  const owner = context.owner ?? context.module;
-  trackModuleOwner(context.module, owner);
-  const activeContext = {
-    ...context,
-    owner,
-    ownershipToken: getOwnerToken(owner),
-  };
+  const activeContext = activateModuleContext(context);
   return internal.executionContext.run(activeContext, callback);
 }
 

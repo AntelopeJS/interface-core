@@ -48,6 +48,9 @@
       "decorators": [
         "dist/decorators.d.ts"
       ],
+      "facades": [
+        "dist/facades.d.ts"
+      ],
       "modules": [
         "dist/modules.d.ts"
       ],

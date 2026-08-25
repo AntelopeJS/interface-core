@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 import { expect } from "chai";
 import * as declarations from "..";
+import * as facades from "../facades";
 import * as modules from "../modules";
 import * as runtime from "../runtime";
 
@@ -12,6 +13,7 @@ const path = require("node:path");
 const root = process.env.INTERFACE_CORE_ROOT;
 const entries = {
   root: path.join(root, "dist"),
+  facades: path.join(root, "dist", "facades.js"),
   modules: path.join(root, "dist", "modules.js"),
   runtime: path.join(root, "dist", "runtime.js"),
 };
@@ -19,6 +21,7 @@ const loaded = Object.fromEntries(
   process.env.INTERFACE_CORE_ORDER.split(",").map((entry) => [entry, require(entries[entry])]),
 );
 const core = loaded.root;
+const facades = loaded.facades;
 const modules = loaded.modules;
 const runtime = loaded.runtime;
 assert.equal(core.Events, modules.Events);
@@ -26,10 +29,10 @@ assert.equal(core.ListModules, modules.ListModules);
 assert.equal(core.GetModuleInfo, modules.GetModuleInfo);
 assert.equal(core.GetRuntimeInfo, runtime.GetRuntimeInfo);
 assert.equal(core.RegisterDevServer, runtime.RegisterDevServer);
-assert.equal(core.BindToCurrentModuleContext, undefined);
+assert.equal(core.CreateInterfaceFacade, undefined);
 assert.equal(core.GetModuleContext, undefined);
 assert.equal(core.RunWithModuleContext, undefined);
-assert.equal(typeof modules.BindToCurrentModuleContext, "function");
+assert.equal(typeof facades.CreateInterfaceFacade, "function");
 assert.equal(typeof modules.GetModuleContext, "function");
 assert.equal(typeof modules.RunWithModuleContext, "function");
 assert.equal(core.IsInterfaceProxy(core.ListModules.proxy), true);
@@ -60,20 +63,20 @@ describe("root interface declarations", () => {
     expect(declarations.GetModuleInfo).to.equal(modules.GetModuleInfo);
   });
 
-  it("keeps execution context APIs on the modules subpath", () => {
-    expect("BindToCurrentModuleContext" in declarations).to.equal(false);
+  it("keeps infrastructure APIs on their dedicated subpaths", () => {
+    expect("CreateInterfaceFacade" in declarations).to.equal(false);
     expect("GetModuleContext" in declarations).to.equal(false);
     expect("RunWithModuleContext" in declarations).to.equal(false);
-    expect(modules.BindToCurrentModuleContext).to.be.a("function");
+    expect(facades.CreateInterfaceFacade).to.be.a("function");
     expect(modules.GetModuleContext).to.be.a("function");
     expect(modules.RunWithModuleContext).to.be.a("function");
   });
 
   it("loads complete canonical declarations when the root loads first", () => {
-    runFreshProcess("root,runtime,modules");
+    runFreshProcess("root,runtime,modules,facades");
   });
 
   it("loads complete canonical declarations when subpaths load first", () => {
-    runFreshProcess("modules,runtime,root");
+    runFreshProcess("facades,modules,runtime,root");
   });
 });
