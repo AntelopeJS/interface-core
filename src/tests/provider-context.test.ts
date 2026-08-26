@@ -5,7 +5,8 @@ import {
   ModuleContextInvalidatedError,
   RegisteringProxy,
 } from "..";
-import { Events, GetModuleContext, RunWithModuleContext } from "../modules";
+import { runWithModuleContext } from "../internal";
+import { Events, GetModuleContext } from "../modules";
 
 interface ContextObservation {
   module?: string;
@@ -22,7 +23,7 @@ function observeContext(): ContextObservation {
   };
 }
 
-describe("provider callback context", () => {
+describe("internal provider callback context", () => {
   it("restores async provider context across awaits and nested calls", async () => {
     const nested = new AsyncProxy<() => string>("context.nested");
     const outer = new AsyncProxy<() => Promise<ContextObservation[]>>(
@@ -30,11 +31,11 @@ describe("provider callback context", () => {
     );
     const nestedIdentity = GetInterfaceProxyIdentity(nested) as string;
     const outerIdentity = GetInterfaceProxyIdentity(outer) as string;
-    RunWithModuleContext(
+    runWithModuleContext(
       { module: "nested-owner", owner: "nested#1", provider: "nested" },
       () => nested.onCall(() => `${observeContext().owner}:value`),
     );
-    RunWithModuleContext(
+    runWithModuleContext(
       {
         module: "provider-owner",
         owner: "provider-owner#1",
@@ -51,7 +52,7 @@ describe("provider callback context", () => {
         }),
     );
 
-    const observations = await RunWithModuleContext(
+    const observations = await runWithModuleContext(
       {
         module: "consumer",
         owner: "consumer#1",
@@ -78,10 +79,10 @@ describe("provider callback context", () => {
       operation: string;
       context: ContextObservation;
     }> = [];
-    RunWithModuleContext({ module: "consumer", owner: "consumer#1" }, () => {
+    runWithModuleContext({ module: "consumer", owner: "consumer#1" }, () => {
       proxy.register("queued");
     });
-    RunWithModuleContext(
+    runWithModuleContext(
       { module: "provider-owner", owner: "provider#1", provider: "provider" },
       () => {
         proxy.onHandlers(
@@ -98,7 +99,7 @@ describe("provider callback context", () => {
         );
       },
     );
-    RunWithModuleContext(
+    runWithModuleContext(
       {
         module: "consumer",
         owner: "consumer#1",
@@ -131,7 +132,7 @@ describe("provider callback context", () => {
       "context.registering-throw",
     );
     const failure = new Error("register failed");
-    RunWithModuleContext(
+    runWithModuleContext(
       { module: "provider", owner: "provider-throw#1", provider: "provider" },
       () =>
         proxy.onHandlers(
@@ -149,7 +150,7 @@ describe("provider callback context", () => {
   it("rejects callbacks captured from an invalidated owner", async () => {
     const proxy = new AsyncProxy<() => string>("context.invalidated");
     const identity = GetInterfaceProxyIdentity(proxy) as string;
-    RunWithModuleContext(
+    runWithModuleContext(
       { module: "provider", owner: "provider-old#1", provider: "provider" },
       () => {
         proxy.onCall(() => "stale", true);
@@ -157,7 +158,7 @@ describe("provider callback context", () => {
       },
     );
 
-    const error = await RunWithModuleContext(
+    const error = await runWithModuleContext(
       {
         module: "consumer",
         owner: "consumer#1",
@@ -177,7 +178,7 @@ describe("provider callback context", () => {
     const proxy = new RegisteringProxy<(id: string) => void>(
       "context.invalidated-registering",
     );
-    RunWithModuleContext(
+    runWithModuleContext(
       {
         module: "provider",
         owner: "provider-register#old",

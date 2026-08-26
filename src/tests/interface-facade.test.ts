@@ -3,11 +3,11 @@ import * as InterfaceCore from "..";
 import { InterfaceFunction } from "..";
 import { ModuleContextInvalidatedError } from "../errors";
 import { CreateInterfaceFacade, type InterfaceFacadeScope } from "../facades";
+import { runWithModuleContext } from "../internal";
 import {
   Events,
   GetModuleContext,
   type ModuleExecutionContext,
-  RunWithModuleContext,
 } from "../modules";
 
 class SharedResult {}
@@ -91,7 +91,7 @@ describe("interface facades", () => {
     const nestedIdentity = "async:facade.NestedCall";
     const sharedMetadata = {};
     for (const provider of ["provider-a", "provider-b"]) {
-      RunWithModuleContext(providerContext(provider), () => {
+      runWithModuleContext(providerContext(provider), () => {
         Call.proxy.onCall((value) => `${provider}:${value}`, true);
         NestedCall.proxy.onCall((value) => `${provider}:nested:${value}`, true);
       });
@@ -139,7 +139,7 @@ describe("interface facades", () => {
 
   it("lets interface builders derive cold APIs from automatic bindings", async () => {
     const Call = InterfaceFunction<() => string>("facade.Derived");
-    RunWithModuleContext(providerContext("provider"), () =>
+    runWithModuleContext(providerContext("provider"), () =>
       Call.proxy.onCall(() => "value", true),
     );
     const declaration = {
@@ -223,7 +223,7 @@ describe("interface facades", () => {
 
   it("rejects calls from an invalidated facade generation", async () => {
     const Call = InterfaceFunction<() => string>("facade.Stale");
-    RunWithModuleContext(providerContext("provider"), () =>
+    runWithModuleContext(providerContext("provider"), () =>
       Call.proxy.onCall(() => "value", true),
     );
     const context = consumerContext(
@@ -232,7 +232,7 @@ describe("interface facades", () => {
       "provider",
     );
     const facade = CreateInterfaceFacade({ Call }, context);
-    RunWithModuleContext(context, () =>
+    runWithModuleContext(context, () =>
       Events.ModuleDestroyed.emit("consumer"),
     );
 
@@ -277,7 +277,7 @@ describe("interface facades", () => {
       currentContext,
     );
     const listener = () => undefined;
-    RunWithModuleContext(staleContext, () =>
+    runWithModuleContext(staleContext, () =>
       Events.ModuleDestroyed.emit("consumer"),
     );
     current.Registrations.register("current");

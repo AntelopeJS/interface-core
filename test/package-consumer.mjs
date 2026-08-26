@@ -43,7 +43,6 @@ import {
 import {
   GetModuleContext,
   type ModuleExecutionContext,
-  RunWithModuleContext,
 } from "@antelopejs/interface-core/modules";
 import { CreateInterfaceFacade } from "@antelopejs/interface-core/facades";
 
@@ -62,7 +61,6 @@ void CreateInterfaceFacade;
 void GetModuleContext;
 void GetRuntimeInfo;
 void ListModules;
-void RunWithModuleContext;
 `;
 
 const rootFirstImports = `
@@ -94,7 +92,7 @@ assert.equal(core.GetModuleContext, undefined);
 assert.equal(core.RunWithModuleContext, undefined);
 assert.equal(typeof facades.CreateInterfaceFacade, "function");
 assert.equal(typeof modules.GetModuleContext, "function");
-assert.equal(typeof modules.RunWithModuleContext, "function");
+assert.equal(modules.RunWithModuleContext, undefined);
 assert.equal(core.IsInterfaceProxy(core.GetRuntimeInfo.proxy), true);
 assert.equal(core.IsInterfaceProxy(core.ListModules.proxy), true);
 assert.equal(core.GetInterfaceProxyIdentity(core.GetRuntimeInfo.proxy), "async:runtime.GetRuntimeInfo");
@@ -108,44 +106,41 @@ const consumerContext = {
   owner: "consumer#1",
   providerRoutes: { [identity]: "provider" },
 };
+let callbackContext;
 
-modules.RunWithModuleContext(providerContext, () => {
-  core.ImplementInterface({ GetValue: proxy }, {
+const providerCore = facades.CreateInterfaceFacade(core, providerContext);
+providerCore.ImplementInterface(
+  { GetValue: proxy },
+  {
     GetValue: async () => {
       await Promise.resolve();
-      return modules.GetModuleContext();
+      callbackContext = modules.GetModuleContext();
+      return "provider#old";
     },
-  });
-});
+  },
+);
 
 (async () => {
-  const oldContext = await modules.RunWithModuleContext(consumerContext, () => proxy());
   const facade = facades.CreateInterfaceFacade({ GetValue: proxy }, consumerContext);
-  const facadeContext = await facade.GetValue();
-  assert.equal(oldContext.module, "provider");
-  assert.equal(oldContext.owner, "provider#old");
-  assert.equal(oldContext.provider, "provider");
-  assert.deepEqual(facadeContext, oldContext);
+  assert.equal(await facade.GetValue(), "provider#old");
+  assert.equal(callbackContext, undefined);
 
-  modules.RunWithModuleContext(
+  const replacementProvider = facades.CreateInterfaceFacade(
+    core,
     { module: "provider", owner: "provider#new", provider: "provider" },
-    () => core.ImplementInterface({ GetValue: proxy }, {
-      GetValue: () => modules.GetModuleContext().owner,
-    }),
   );
-  modules.RunWithModuleContext(providerContext, () => {
-    modules.Events.ModuleDestroyed.emit("provider");
-  });
-  const replacement = await modules.RunWithModuleContext(consumerContext, () => proxy());
-  assert.equal(replacement, "provider#new");
+  replacementProvider.ImplementInterface(
+    { GetValue: proxy },
+    { GetValue: () => "provider#new" },
+  );
+  modules.Events.ModuleDestroyed.emit("provider", providerContext.owner);
   assert.equal(await facade.GetValue(), "provider#new");
 
   internal.interfaceConnections.consumer = {
     example: [{ path: "example", provider: "provider", selected: true }],
   };
-  const metadata = modules.RunWithModuleContext(consumerContext, () =>
-    core.GetInterfaceInstances("example"),
-  );
+  const consumerCore = facades.CreateInterfaceFacade(core, consumerContext);
+  const metadata = consumerCore.GetInterfaceInstances("example");
   assert.deepEqual(metadata, [
     { path: "example", provider: "provider", selected: true },
   ]);

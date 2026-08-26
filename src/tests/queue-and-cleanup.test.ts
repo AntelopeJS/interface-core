@@ -5,8 +5,12 @@ import {
   ProviderQueueFullError,
   RegisteringProxy,
 } from "..";
-import { internal, type RuntimeErrorDetails } from "../internal";
-import { Events, RunWithModuleContext } from "../modules";
+import {
+  internal,
+  type RuntimeErrorDetails,
+  runWithModuleContext,
+} from "../internal";
+import { Events } from "../modules";
 
 describe("bounded queues and resilient cleanup", () => {
   const originalQueueLimit = internal.maxPendingOperations;
@@ -55,7 +59,7 @@ describe("bounded queues and resilient cleanup", () => {
     internal.runtimeErrorReporter = (error, details) => {
       errors.push({ error, details });
     };
-    RunWithModuleContext({ module: "provider" }, () => {
+    runWithModuleContext({ module: "provider" }, () => {
       proxy.onHandlers(
         () => undefined,
         (id) => {
@@ -66,7 +70,7 @@ describe("bounded queues and resilient cleanup", () => {
         },
       );
     });
-    RunWithModuleContext({ module: "consumer" }, () => {
+    runWithModuleContext({ module: "consumer" }, () => {
       proxy.register("first");
       proxy.register("second");
     });

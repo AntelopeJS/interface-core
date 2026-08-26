@@ -34,7 +34,7 @@ assert.equal(core.GetModuleContext, undefined);
 assert.equal(core.RunWithModuleContext, undefined);
 assert.equal(typeof facades.CreateInterfaceFacade, "function");
 assert.equal(typeof modules.GetModuleContext, "function");
-assert.equal(typeof modules.RunWithModuleContext, "function");
+assert.equal(modules.RunWithModuleContext, undefined);
 assert.equal(core.IsInterfaceProxy(core.ListModules.proxy), true);
 assert.equal(core.IsInterfaceProxy(core.GetRuntimeInfo.proxy), true);
 assert.equal(core.GetInterfaceProxyIdentity(core.ListModules.proxy), "async:modules.ListModules");
@@ -69,7 +69,7 @@ describe("root interface declarations", () => {
     expect("RunWithModuleContext" in declarations).to.equal(false);
     expect(facades.CreateInterfaceFacade).to.be.a("function");
     expect(modules.GetModuleContext).to.be.a("function");
-    expect(modules.RunWithModuleContext).to.be.a("function");
+    expect("RunWithModuleContext" in modules).to.equal(false);
   });
 
   it("loads complete canonical declarations when the root loads first", () => {

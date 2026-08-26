@@ -5,8 +5,8 @@ import {
   GetInterfaceProxyIdentity,
   RegisteringProxy,
 } from "..";
-import { internal } from "../internal";
-import { Events, RunWithModuleContext } from "../modules";
+import { internal, runWithModuleContext } from "../internal";
+import { Events } from "../modules";
 
 describe("generation-owned cleanup", () => {
   afterEach(() => {
@@ -17,19 +17,19 @@ describe("generation-owned cleanup", () => {
     const proxy = new AsyncProxy<() => string>("generation.async");
     const identity = GetInterfaceProxyIdentity(proxy) as string;
     let oldLease: ReturnType<typeof proxy.onCall> | undefined;
-    RunWithModuleContext(
+    runWithModuleContext(
       { module: "shared", owner: "shared#old", provider: "shared" },
       () => {
         oldLease = proxy.onCall(() => "old");
       },
     );
-    RunWithModuleContext(
+    runWithModuleContext(
       { module: "shared", owner: "shared#new", provider: "shared" },
       () => proxy.onCall(() => "new"),
     );
 
     proxy.detach(oldLease);
-    RunWithModuleContext(
+    runWithModuleContext(
       { module: "shared", owner: "shared#old", provider: "shared" },
       () => {
         Events.ModuleDestroyed.emit("shared");
@@ -40,7 +40,7 @@ describe("generation-owned cleanup", () => {
     expect(internal.knownAsync.has("shared#old")).to.equal(false);
     expect(internal.knownAsync.has("shared#new")).to.equal(true);
     expect(
-      await RunWithModuleContext(
+      await runWithModuleContext(
         {
           module: "consumer",
           owner: "consumer#1",
@@ -56,7 +56,7 @@ describe("generation-owned cleanup", () => {
       "generation.registering",
     );
     const calls: string[] = [];
-    RunWithModuleContext(
+    runWithModuleContext(
       { module: "shared", owner: "shared-register#old", provider: "shared" },
       () =>
         proxy.onHandlers(
@@ -64,7 +64,7 @@ describe("generation-owned cleanup", () => {
           () => undefined,
         ),
     );
-    RunWithModuleContext(
+    runWithModuleContext(
       { module: "shared", owner: "shared-register#new", provider: "shared" },
       () =>
         proxy.onHandlers(
@@ -72,7 +72,7 @@ describe("generation-owned cleanup", () => {
           () => undefined,
         ),
     );
-    RunWithModuleContext(
+    runWithModuleContext(
       { module: "shared", owner: "shared-register#old", provider: "shared" },
       () => Events.ModuleDestroyed.emit("shared"),
     );
@@ -89,11 +89,11 @@ describe("generation-owned cleanup", () => {
       "generation.split-registering",
     );
     const calls: string[] = [];
-    RunWithModuleContext(
+    runWithModuleContext(
       { module: "shared", owner: "split#old", provider: "shared" },
       () => proxy.onRegister((id) => calls.push(`old-register:${id}`)),
     );
-    RunWithModuleContext(
+    runWithModuleContext(
       { module: "shared", owner: "split#new", provider: "shared" },
       () => proxy.onUnregister((id) => calls.push(`new-unregister:${id}`)),
     );
@@ -101,7 +101,7 @@ describe("generation-owned cleanup", () => {
 
     expect(calls).to.deep.equal(["old-register:item"]);
 
-    RunWithModuleContext(
+    runWithModuleContext(
       { module: "shared", owner: "split#old", provider: "shared" },
       () => {
         Events.ModuleDestroyed.emit("shared");
@@ -114,7 +114,7 @@ describe("generation-owned cleanup", () => {
     expect(internal.knownRegisters.has("split#old")).to.equal(false);
     expect(internal.knownRegisters.has("split#new")).to.equal(true);
 
-    RunWithModuleContext(
+    runWithModuleContext(
       { module: "shared", owner: "split#new", provider: "shared" },
       () => {
         Events.ModuleDestroyed.emit("shared");
@@ -132,11 +132,11 @@ describe("generation-owned cleanup", () => {
       "generation.reverse-split-registering",
     );
     const calls: string[] = [];
-    RunWithModuleContext(
+    runWithModuleContext(
       { module: "shared", owner: "reverse#old", provider: "shared" },
       () => proxy.onUnregister((id) => calls.push(`old-unregister:${id}`)),
     );
-    RunWithModuleContext(
+    runWithModuleContext(
       { module: "shared", owner: "reverse#new", provider: "shared" },
       () => proxy.onRegister((id) => calls.push(`new-register:${id}`)),
     );
@@ -150,7 +150,7 @@ describe("generation-owned cleanup", () => {
       "new-register:survivor",
     ]);
 
-    RunWithModuleContext(
+    runWithModuleContext(
       { module: "shared", owner: "reverse#old", provider: "shared" },
       () => {
         Events.ModuleDestroyed.emit("shared");
@@ -164,7 +164,7 @@ describe("generation-owned cleanup", () => {
     expect(internal.knownRegisters.has("reverse#old")).to.equal(false);
     expect(internal.knownRegisters.has("reverse#new")).to.equal(true);
 
-    RunWithModuleContext(
+    runWithModuleContext(
       { module: "shared", owner: "reverse#new", provider: "shared" },
       () => {
         Events.ModuleDestroyed.emit("shared");
@@ -188,15 +188,15 @@ describe("generation-owned cleanup", () => {
       (id) => calls.push(`remove:${id}`),
       true,
     );
-    RunWithModuleContext({ module: "consumer", owner: "consumer#old" }, () => {
+    runWithModuleContext({ module: "consumer", owner: "consumer#old" }, () => {
       registrations.register("old");
       event.register(() => calls.push("old-event"));
     });
-    RunWithModuleContext({ module: "consumer", owner: "consumer#new" }, () => {
+    runWithModuleContext({ module: "consumer", owner: "consumer#new" }, () => {
       registrations.register("new");
       event.register(() => calls.push("new-event"));
     });
-    RunWithModuleContext({ module: "consumer", owner: "consumer#old" }, () => {
+    runWithModuleContext({ module: "consumer", owner: "consumer#old" }, () => {
       Events.ModuleDestroyed.emit("consumer");
     });
 

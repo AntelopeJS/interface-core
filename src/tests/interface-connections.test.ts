@@ -4,8 +4,7 @@ import {
   GetInterfaceInstances,
   type InterfaceConnection,
 } from "..";
-import { internal } from "../internal";
-import { RunWithModuleContext } from "../modules";
+import { internal, runWithModuleContext } from "../internal";
 
 describe("interface connection metadata", () => {
   afterEach(() => {
@@ -30,7 +29,7 @@ describe("interface connection metadata", () => {
       "@antelopejs/interface-example": connections,
     };
 
-    const result = RunWithModuleContext(
+    const result = runWithModuleContext(
       { module: "consumer", owner: "consumer#metadata" },
       () => ({
         all: GetInterfaceInstances("@antelopejs/interface-example"),

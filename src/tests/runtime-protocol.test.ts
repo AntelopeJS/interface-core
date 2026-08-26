@@ -3,7 +3,7 @@ import { cpSync, mkdtempSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { expect } from "chai";
 import { AsyncProxy, RunWithResponsibleModule } from "..";
-import { RunWithModuleContext } from "../modules";
+import { runWithModuleContext } from "../internal";
 
 interface ForeignCore {
   AsyncProxy: new (
@@ -53,7 +53,7 @@ describe("global runtime protocol", () => {
         foreign.GetResponsibleModule(),
       ),
     ).to.equal("shared-owner");
-    RunWithModuleContext(
+    runWithModuleContext(
       { module: "provider", owner: "provider#copy", provider: "provider" },
       () =>
         foreign.ImplementInterface(
@@ -65,7 +65,7 @@ describe("global runtime protocol", () => {
     );
 
     expect(
-      await RunWithModuleContext(
+      await runWithModuleContext(
         {
           module: "consumer",
           owner: "consumer#copy",

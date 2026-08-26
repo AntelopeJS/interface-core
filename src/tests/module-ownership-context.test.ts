@@ -8,8 +8,8 @@ import {
   RunWithResponsibleModule,
 } from "..";
 import { MissingProviderError } from "../errors";
-import { internal } from "../internal";
-import { Events, RunWithModuleContext } from "../modules";
+import { internal, runWithModuleContext } from "../internal";
+import { Events } from "../modules";
 
 function runDetached(module: string, callback: () => void): Promise<unknown> {
   return new Promise((resolve) => {
@@ -182,7 +182,7 @@ describe("explicit module ownership", () => {
   it("invalidates provider-aware module contexts", async () => {
     const proxy = new AsyncProxy<() => string>();
     const staleAttachment = new Promise<unknown>((resolve) => {
-      RunWithModuleContext(
+      runWithModuleContext(
         { module: "routed-module", provider: "routed-provider" },
         () => {
           setImmediate(() => {

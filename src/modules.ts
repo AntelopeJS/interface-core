@@ -6,23 +6,8 @@ import {
   type ModuleExecutionContext,
   peekModuleContext,
   type RuntimeCleanup,
-  runWithModuleContext,
 } from "./internal";
 import { EventProxy, InterfaceFunction } from "./proxies";
-
-/**
- * Runs work with module ownership and provider routing across asynchronous work.
- *
- * This is an infrastructure API for AntelopeJS Core and custom module loaders.
- * Application modules should rely on resolver-selected interface imports and
- * use `importOverrides` instead of calling this function.
- */
-export function RunWithModuleContext<T>(
-  context: ModuleExecutionContext,
-  callback: () => T,
-): T {
-  return runWithModuleContext(context, callback);
-}
 
 /**
  * Returns the active module execution context, if one exists.
