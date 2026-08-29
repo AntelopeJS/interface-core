@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.0.12
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.0.11...v0.0.12)
+
+### 🩹 Fixes
+
+- **runtime:** Export core interface declarations ([#11](https://github.com/AntelopeJS/interface-core/pull/11))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <upd4ting@gmail.com>
+
 ## v0.0.11
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.0.10...v0.0.11)
