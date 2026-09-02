@@ -77,8 +77,8 @@
     "lint:fix": "biome check --write .",
     "lint": "biome check .",
     "prepack": "pnpm run build",
-    "release": "pnpm run lint && pnpm run prepack && release-it",
-    "test": "pnpm run build && ajs module test .",
+    "release": "pnpm run lint && pnpm run test && pnpm run test:package && pnpm run prepack && release-it",
+    "test": "pnpm run build && mocha 'dist/tests/**/*.test.js'",
     "test:package": "node test/package-consumer.mjs"
   },
   "antelopeJs": {
@@ -96,12 +96,14 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.19.15",
     "chai": "^4.5.0",
+    "mocha": "^11.7.5",
     "release-it": "^19.2.4",
     "release-it-changelogen": "^0.1.0",
     "rimraf": "^6.1.3",
     "typescript": "^5.9.3"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true
   }
 }
