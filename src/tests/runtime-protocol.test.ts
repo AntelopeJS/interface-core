@@ -7,9 +7,7 @@ import { RunWithModuleContext } from "../modules";
 import { AsyncProxy, RunWithResponsibleModule } from "..";
 
 interface ForeignCore {
-  AsyncProxy: new (
-    identity?: string,
-  ) => {
+  AsyncProxy: new (identity?: string) => {
     call(): Promise<string>;
   };
   ImplementInterface(

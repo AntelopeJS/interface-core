@@ -4,45 +4,21 @@
   "description": "AntelopeJS core interface primitives - proxies, decorators, interface functions, and logging",
   "keywords": [
     "antelopejs",
-    "interface",
-    "core"
+    "core",
+    "interface"
   ],
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/AntelopeJS/interface-core.git"
   },
-  "license": "Apache-2.0",
-  "packageManager": "pnpm@10.6.5",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "files": [
     "dist",
     "docs",
     "skills"
   ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "default": "./dist/*.js"
-    },
-    "./config": {
-      "types": "./dist/config.d.ts",
-      "default": "./dist/config.js"
-    },
-    "./logging": {
-      "types": "./dist/logging/index.d.ts",
-      "default": "./dist/logging/index.js"
-    },
-    "./logging/*": {
-      "types": "./dist/logging/*.d.ts",
-      "default": "./dist/logging/*.js"
-    },
-    "./package.json": "./package.json"
-  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "typesVersions": {
     "*": {
       "decorators": [
@@ -71,6 +47,33 @@
       ]
     }
   },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "default": "./dist/config.js"
+    },
+    "./logging": {
+      "types": "./dist/logging/index.d.ts",
+      "default": "./dist/logging/index.js"
+    },
+    "./logging/*": {
+      "types": "./dist/logging/*.d.ts",
+      "default": "./dist/logging/*.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "build": "rimraf dist && tsc",
     "format": "oxfmt .",
@@ -82,12 +85,6 @@
     "test:package": "node test/package-consumer.mjs",
     "format:check": "oxfmt --check .",
     "knip": "knip"
-  },
-  "antelopeJs": {
-    "test": "src/antelope.test.ts",
-    "skills": [
-      "./skills"
-    ]
   },
   "dependencies": {
     "reflect-metadata": "^0.2.2"
@@ -109,8 +106,11 @@
     "rimraf": "^6.1.3",
     "typescript": "^5.9.3"
   },
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
+  "packageManager": "pnpm@10.6.5",
+  "antelopeJs": {
+    "test": "src/antelope.test.ts",
+    "skills": [
+      "./skills"
+    ]
   }
 }
