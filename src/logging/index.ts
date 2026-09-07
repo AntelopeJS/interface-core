@@ -115,7 +115,7 @@ export namespace Logging {
    *
    * @param args - Values to log, which can be of any type and will be serialized appropriately
    */
-  // biome-ignore lint/suspicious/noShadowRestrictedNames: public logging API exposes Error as a level name.
+  // public logging API exposes Error as a level name.
   export const Error = MainChannel.Error.bind(MainChannel);
 
   /**
