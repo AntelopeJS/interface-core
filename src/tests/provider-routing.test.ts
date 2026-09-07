@@ -1,4 +1,6 @@
 import { expect } from "chai";
+
+import { Events, RunWithModuleContext } from "../modules";
 import {
   AmbiguousProviderError,
   AsyncProxy,
@@ -6,7 +8,6 @@ import {
   MissingProviderError,
   RegisteringProxy,
 } from "..";
-import { Events, RunWithModuleContext } from "../modules";
 
 describe("provider routing and leases", () => {
   it("routes providers through async module execution context", async () => {

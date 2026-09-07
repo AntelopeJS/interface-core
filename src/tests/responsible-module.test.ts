@@ -1,4 +1,5 @@
 import { expect } from "chai";
+
 import {
   findResponsibleFile,
   type ModuleFolderEntry,

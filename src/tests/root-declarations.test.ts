@@ -1,6 +1,7 @@
-import { execFileSync } from "node:child_process";
-import { resolve } from "node:path";
 import { expect } from "chai";
+import { resolve } from "node:path";
+import { execFileSync } from "node:child_process";
+
 import * as declarations from "..";
 import * as modules from "../modules";
 import * as runtime from "../runtime";

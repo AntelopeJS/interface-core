@@ -1,4 +1,5 @@
 import { expect } from "chai";
+
 import { AsyncProxy } from "..";
 
 describe("AsyncProxy call", () => {

@@ -1,12 +1,13 @@
 import { expect } from "chai";
+
+import { Events, RunWithModuleContext } from "../modules";
+import { internal, type RuntimeErrorDetails } from "../internal";
 import {
   AsyncProxy,
   EventProxy,
   ProviderQueueFullError,
   RegisteringProxy,
 } from "..";
-import { internal, type RuntimeErrorDetails } from "../internal";
-import { Events, RunWithModuleContext } from "../modules";
 
 describe("bounded queues and resilient cleanup", () => {
   const originalQueueLimit = internal.maxPendingOperations;

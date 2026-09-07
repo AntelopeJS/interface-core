@@ -1,11 +1,12 @@
 import { expect } from "chai";
+
+import { Events, GetModuleContext, RunWithModuleContext } from "../modules";
 import {
   AsyncProxy,
   GetInterfaceProxyIdentity,
   ModuleContextInvalidatedError,
   RegisteringProxy,
 } from "..";
-import { Events, GetModuleContext, RunWithModuleContext } from "../modules";
 
 interface ContextObservation {
   module?: string;

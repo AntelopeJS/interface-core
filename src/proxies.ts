@@ -1,3 +1,4 @@
+import { findResponsibleFile } from "./responsible-module";
 import {
   AmbiguousProviderError,
   MissingProviderError,
@@ -13,7 +14,6 @@ import {
   runWithCapturedModuleContext,
   runWithModuleContext,
 } from "./internal";
-import { findResponsibleFile } from "./responsible-module";
 
 type Func<A extends any[] = any[], R = any> = (...args: A) => R;
 type RegisterFunction = (id: any, ...args: any[]) => void;

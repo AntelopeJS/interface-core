@@ -1,4 +1,5 @@
 import { expect } from "chai";
+
 import { RegisteringProxy } from "..";
 import { internal } from "../internal";
 

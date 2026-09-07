@@ -1,7 +1,8 @@
 import "reflect-metadata";
+
+import { Logging } from "./logging";
 import type { Class } from "./decorators";
 import { type InterfaceConnection, internal } from "./internal";
-import { Logging } from "./logging";
 import {
   type AsyncProxy,
   type EventProxy,
