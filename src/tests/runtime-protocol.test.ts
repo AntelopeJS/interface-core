@@ -1,14 +1,13 @@
+import { expect } from "chai";
+import { dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { cpSync, mkdtempSync, rmSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { expect } from "chai";
-import { AsyncProxy, RunWithResponsibleModule } from "..";
+
 import { RunWithModuleContext } from "../modules";
+import { AsyncProxy, RunWithResponsibleModule } from "..";
 
 interface ForeignCore {
-  AsyncProxy: new (
-    identity?: string,
-  ) => {
+  AsyncProxy: new (identity?: string) => {
     call(): Promise<string>;
   };
   ImplementInterface(

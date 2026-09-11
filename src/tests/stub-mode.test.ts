@@ -1,5 +1,7 @@
-import { runInNewContext } from "node:vm";
 import { expect } from "chai";
+import { runInNewContext } from "node:vm";
+
+import { internal } from "../internal";
 import {
   AsyncProxy,
   isMissingProviderError,
@@ -7,7 +9,6 @@ import {
   MissingProviderError,
   RegisteringProxy,
 } from "..";
-import { internal } from "../internal";
 
 describe("test stub mode", () => {
   afterEach(() => {

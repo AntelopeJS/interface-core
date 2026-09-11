@@ -1,6 +1,7 @@
 import { expect } from "chai";
-import { type AsyncProxy, ImplementInterface } from "..";
+
 import * as runtime from "../runtime";
+import { type AsyncProxy, ImplementInterface } from "..";
 import {
   type DevServerEndpoint,
   GetRuntimeInfo,

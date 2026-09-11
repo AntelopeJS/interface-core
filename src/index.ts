@@ -1,7 +1,8 @@
 import "reflect-metadata";
+
+import { Logging } from "./logging";
 import type { Class } from "./decorators";
 import { type InterfaceConnection, internal } from "./internal";
-import { Logging } from "./logging";
 import {
   type AsyncProxy,
   type EventProxy,
@@ -78,17 +79,18 @@ type Func<A extends any[] = any[], R = any> = (...args: A) => R;
 
 type RID<T> = T extends (id: infer P, ...args: any[]) => void ? P : never;
 
-type InterfaceImplType<T> = T extends RegisteringProxy<infer P>
-  ? { register: P; unregister: (id: RID<P>) => void }
-  : T extends AsyncProxy<infer P>
-    ? P
-    : T extends EventProxy
-      ? never
-      : T extends (...args: infer A) => infer R
-        ? (...args: A) => Awaited<R> | R
-        : T extends Record<string, any>
-          ? InterfaceToImpl<T>
-          : never;
+type InterfaceImplType<T> =
+  T extends RegisteringProxy<infer P>
+    ? { register: P; unregister: (id: RID<P>) => void }
+    : T extends AsyncProxy<infer P>
+      ? P
+      : T extends EventProxy
+        ? never
+        : T extends (...args: infer A) => infer R
+          ? (...args: A) => Awaited<R> | R
+          : T extends Record<string, any>
+            ? InterfaceToImpl<T>
+            : never;
 
 type InterfaceToImpl<T> = T extends infer P
   ? {

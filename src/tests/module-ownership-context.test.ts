@@ -1,4 +1,8 @@
 import { expect } from "chai";
+
+import { internal } from "../internal";
+import { MissingProviderError } from "../errors";
+import { Events, RunWithModuleContext } from "../modules";
 import {
   AsyncProxy,
   EventProxy,
@@ -7,9 +11,6 @@ import {
   RegisteringProxy,
   RunWithResponsibleModule,
 } from "..";
-import { MissingProviderError } from "../errors";
-import { internal } from "../internal";
-import { Events, RunWithModuleContext } from "../modules";
 
 function runDetached(module: string, callback: () => void): Promise<unknown> {
   return new Promise((resolve) => {

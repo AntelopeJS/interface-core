@@ -1,7 +1,8 @@
 import { expect } from "chai";
-import { AsyncProxy, RegisteringProxy } from "..";
-import { internal } from "../internal";
+
 import { Events } from "../modules";
+import { internal } from "../internal";
+import { AsyncProxy, RegisteringProxy } from "..";
 
 describe("ModuleDestroyed cleanup", () => {
   beforeEach(() => {

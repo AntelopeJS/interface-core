@@ -16,12 +16,48 @@ factories, `GetMetadata`, and config types are ordinary consumer-side helpers (n
 ## Import paths
 
 ```ts
-import { InterfaceFunction, ImplementInterface, GetMetadata, GetInterfaceInstances, GetInterfaceInstance, AsyncProxy, EventProxy, RegisteringProxy, GetResponsibleModule } from "@antelopejs/interface-core";
-import { MakeClassDecorator, MakeMethodDecorator, MakePropertyDecorator, MakeParameterDecorator } from "@antelopejs/interface-core/decorators"; // + many combined variants
-import { Events, ListModules, GetModuleInfo, LoadModule, StartModule, StopModule, DestroyModule, ReloadModule } from "@antelopejs/interface-core/modules";
-import { AsyncProxy, EventProxy, RegisteringProxy } from "@antelopejs/interface-core/proxies"; // same classes the root entry re-exports; pick one import site
-import { GetRuntimeInfo, RegisterDevServer, DEV_REGISTRY_PATH } from "@antelopejs/interface-core/runtime";
-import { defineConfig, type AntelopeConfig, type AntelopeModuleConfig } from "@antelopejs/interface-core/config";
+import {
+  InterfaceFunction,
+  ImplementInterface,
+  GetMetadata,
+  GetInterfaceInstances,
+  GetInterfaceInstance,
+  AsyncProxy,
+  EventProxy,
+  RegisteringProxy,
+  GetResponsibleModule,
+} from "@antelopejs/interface-core";
+import {
+  MakeClassDecorator,
+  MakeMethodDecorator,
+  MakePropertyDecorator,
+  MakeParameterDecorator,
+} from "@antelopejs/interface-core/decorators"; // + many combined variants
+import {
+  Events,
+  ListModules,
+  GetModuleInfo,
+  LoadModule,
+  StartModule,
+  StopModule,
+  DestroyModule,
+  ReloadModule,
+} from "@antelopejs/interface-core/modules";
+import {
+  AsyncProxy,
+  EventProxy,
+  RegisteringProxy,
+} from "@antelopejs/interface-core/proxies"; // same classes the root entry re-exports; pick one import site
+import {
+  GetRuntimeInfo,
+  RegisterDevServer,
+  DEV_REGISTRY_PATH,
+} from "@antelopejs/interface-core/runtime";
+import {
+  defineConfig,
+  type AntelopeConfig,
+  type AntelopeModuleConfig,
+} from "@antelopejs/interface-core/config";
 import { Logging } from "@antelopejs/interface-core/logging";
 ```
 
@@ -65,8 +101,8 @@ implemented; providers `emit` on them, consumers `register`/`unregister` handler
 ```ts
 import { Logging } from "@antelopejs/interface-core/logging";
 
-Logging.Info("hello");                       // main channel; also Error/Warn/Debug/Trace
-const ch = new Logging.Channel("database");  // named channel
+Logging.Info("hello"); // main channel; also Error/Warn/Debug/Trace
+const ch = new Logging.Channel("database"); // named channel
 ch.Debug("query", { ms: 12 });
 ```
 

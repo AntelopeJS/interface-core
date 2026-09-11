@@ -1,12 +1,13 @@
 import { expect } from "chai";
+
+import { internal } from "../internal";
+import { Events, RunWithModuleContext } from "../modules";
 import {
   AsyncProxy,
   EventProxy,
   GetInterfaceProxyIdentity,
   RegisteringProxy,
 } from "..";
-import { internal } from "../internal";
-import { Events, RunWithModuleContext } from "../modules";
 
 describe("generation-owned cleanup", () => {
   afterEach(() => {

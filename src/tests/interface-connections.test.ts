@@ -1,11 +1,12 @@
 import { expect } from "chai";
+
+import { internal } from "../internal";
+import { RunWithModuleContext } from "../modules";
 import {
   GetInterfaceInstance,
   GetInterfaceInstances,
   type InterfaceConnection,
 } from "..";
-import { internal } from "../internal";
-import { RunWithModuleContext } from "../modules";
 
 describe("interface connection metadata", () => {
   afterEach(() => {

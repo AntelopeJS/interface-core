@@ -1,7 +1,8 @@
-import { runInNewContext } from "node:vm";
 import { expect } from "chai";
-import { AsyncProxy, ImplementInterface, RegisteringProxy } from "..";
+import { runInNewContext } from "node:vm";
+
 import { internal } from "../internal";
+import { AsyncProxy, ImplementInterface, RegisteringProxy } from "..";
 
 describe("ImplementInterface validation", () => {
   afterEach(() => {
