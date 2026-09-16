@@ -43,13 +43,13 @@ describe("findResponsibleFile", () => {
 
   it("returns the first non-implementor match even when an implementor appears earlier", () => {
     const entries: ModuleFolderEntry[] = [
-      { id: "cms", dir: "/project/cms", isImplementor: true },
-      { id: "playground", dir: "/project/cms/playground" },
+      { id: "dms", dir: "/project/dms", isImplementor: true },
+      { id: "playground", dir: "/project/dms/playground" },
     ];
     const trace = [
-      frame("/project/cms/dist/interfaces/cms/page.js"),
-      frame("/project/cms/dist/interfaces/cms/page.js"),
-      frame("/project/cms/playground/dist/table-view/drawer/page.js"),
+      frame("/project/dms/dist/interfaces/dms/page.js"),
+      frame("/project/dms/dist/interfaces/dms/page.js"),
+      frame("/project/dms/playground/dist/table-view/drawer/page.js"),
     ];
 
     expect(findResponsibleFile(trace, entries).module).to.equal("playground");
@@ -57,14 +57,14 @@ describe("findResponsibleFile", () => {
 
   it("falls back to the first implementor match when no consumer frame matches", () => {
     const entries: ModuleFolderEntry[] = [
-      { id: "cms", dir: "/project/cms", isImplementor: true },
+      { id: "dms", dir: "/project/dms", isImplementor: true },
     ];
     const trace = [
-      frame("/project/cms/dist/interfaces/cms/page.js"),
-      frame("/project/cms/dist/implementations/cms/hooks.js"),
+      frame("/project/dms/dist/interfaces/dms/page.js"),
+      frame("/project/dms/dist/implementations/dms/hooks.js"),
     ];
 
-    expect(findResponsibleFile(trace, entries).module).to.equal("cms");
+    expect(findResponsibleFile(trace, entries).module).to.equal("dms");
   });
 
   it("returns undefined when no frame matches any module", () => {
@@ -76,11 +76,11 @@ describe("findResponsibleFile", () => {
 
   it("picks the longest matching folder on a single frame", () => {
     const entries: ModuleFolderEntry[] = [
-      { id: "cms", dir: "/project/cms", isImplementor: true },
-      { id: "playground", dir: "/project/cms/playground" },
+      { id: "dms", dir: "/project/dms", isImplementor: true },
+      { id: "playground", dir: "/project/dms/playground" },
     ];
     const trace = [
-      frame("/project/cms/playground/dist/table-view/drawer/page.js"),
+      frame("/project/dms/playground/dist/table-view/drawer/page.js"),
     ];
 
     expect(findResponsibleFile(trace, entries).module).to.equal("playground");
@@ -90,14 +90,14 @@ describe("findResponsibleFile", () => {
     const entries: ModuleFolderEntry[] = [
       { id: "local", dir: "/home/user/app" },
       {
-        id: "cms",
-        dir: "/home/user/app/.antelope/cache/@antelopejs-private/cms",
+        id: "dms",
+        dir: "/home/user/app/.antelope/cache/@antelopejs-private/dms",
         isImplementor: true,
       },
     ];
     const trace = [
       frame(
-        "/home/user/app/.antelope/cache/@antelopejs-private/cms/dist/interfaces/cms/page.js",
+        "/home/user/app/.antelope/cache/@antelopejs-private/dms/dist/interfaces/dms/page.js",
       ),
       frame("/home/user/app/dist/pages/skins.js"),
     ];
@@ -107,13 +107,13 @@ describe("findResponsibleFile", () => {
 
   it("walks past unregistered intermediate frames between implementor and consumer", () => {
     const entries: ModuleFolderEntry[] = [
-      { id: "cms", dir: "/project/cms", isImplementor: true },
-      { id: "playground", dir: "/project/cms/playground" },
+      { id: "dms", dir: "/project/dms", isImplementor: true },
+      { id: "playground", dir: "/project/dms/playground" },
     ];
     const trace = [
-      frame("/project/cms/dist/interfaces/cms/page.js"),
+      frame("/project/dms/dist/interfaces/dms/page.js"),
       frame("/third-party/anon.js", { functionName: null, typeName: "Proxy" }),
-      frame("/project/cms/playground/dist/page.js"),
+      frame("/project/dms/playground/dist/page.js"),
     ];
 
     expect(findResponsibleFile(trace, entries).module).to.equal("playground");
@@ -121,17 +121,17 @@ describe("findResponsibleFile", () => {
 
   it("stops at the module-loader boundary so top-level side effects are attributed to the loading module, not the requirer", () => {
     const entries: ModuleFolderEntry[] = [
-      { id: "cms", dir: "/project/cms", isImplementor: true },
-      { id: "playground", dir: "/project/cms/playground" },
+      { id: "dms", dir: "/project/dms", isImplementor: true },
+      { id: "playground", dir: "/project/dms/playground" },
     ];
     const trace = [
-      frame("/project/cms/dist/interfaces/cms/page.js"),
-      frame("/project/cms/dist/interfaces/cms/page.js"),
+      frame("/project/dms/dist/interfaces/dms/page.js"),
+      frame("/project/dms/dist/interfaces/dms/page.js"),
       frame("node:internal/modules/cjs/loader"),
       frame("node:internal/modules/helpers"),
-      frame("/project/cms/playground/dist/table-view/category.js"),
+      frame("/project/dms/playground/dist/table-view/category.js"),
     ];
 
-    expect(findResponsibleFile(trace, entries).module).to.equal("cms");
+    expect(findResponsibleFile(trace, entries).module).to.equal("dms");
   });
 });
