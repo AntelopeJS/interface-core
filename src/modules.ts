@@ -104,9 +104,18 @@ function getDestroyedOwner(module: string): string {
   return context.owner ?? module;
 }
 
-Events.ModuleDestroyed.register((module) => {
-  const owner = getDestroyedOwner(module);
-  invalidateModuleContext(owner);
+/**
+ * Takes a destroyed module's registrations back down.
+ *
+ * Runs while the owner's context is still valid: un-registering is the
+ * module's own last piece of work, and the disposers doing it legitimately
+ * call interface functions bound to that context — a route registered through
+ * `api` is released by calling `api`'s unregister function, through a facade
+ * captured when the module registered it. Invalidating first turned every such
+ * call into a `ModuleContextInvalidatedError` and left the registration
+ * standing in the providing module for as long as the process lived.
+ */
+function releaseOwnerRegistrations(module: string, owner: string) {
   for (const cleanup of internal.knownAsync.get(owner) ?? []) {
     runCleanup(cleanup, owner, "detach-async-provider");
   }
@@ -134,6 +143,16 @@ Events.ModuleDestroyed.register((module) => {
         module,
       });
     }
+  }
+}
+
+Events.ModuleDestroyed.register((module) => {
+  const owner = getDestroyedOwner(module);
+  try {
+    releaseOwnerRegistrations(module, owner);
+  } finally {
+    // Only now: nothing else may claim to act for this generation.
+    invalidateModuleContext(owner);
   }
 });
 
