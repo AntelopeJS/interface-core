@@ -1,5 +1,34 @@
 # Changelog
 
+## v0.0.13
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.0.12...v0.0.13)
+
+### 🩹 Fixes
+
+- **ci:** Pass release arguments correctly ([#16](https://github.com/AntelopeJS/interface-core/pull/16))
+- **modules:** Run a module teardown before invalidating its context ([#20](https://github.com/AntelopeJS/interface-core/pull/20))
+
+### 🏡 Chore
+
+- Replace Biome with oxlint, oxfmt and Knip ([#17](https://github.com/AntelopeJS/interface-core/pull/17))
+
+### ✅ Tests
+
+- Migrate CMS module fixtures to DMS ([#19](https://github.com/AntelopeJS/interface-core/pull/19))
+
+### 🤖 CI
+
+- Automate secure npm releases ([#13](https://github.com/AntelopeJS/interface-core/pull/13))
+- Use Node 24 action runtimes ([#14](https://github.com/AntelopeJS/interface-core/pull/14))
+- Authenticate protected release pushes ([#15](https://github.com/AntelopeJS/interface-core/pull/15))
+- Use shared npm release workflow ([#18](https://github.com/AntelopeJS/interface-core/pull/18))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+- Thomas ([@Thomasims](http://github.com/Thomasims))
+
 ## v0.0.12
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.0.11...v0.0.12)
