@@ -40,6 +40,26 @@ export interface ModuleSourceLocalFolder extends ModuleSource {
   reloadCommand?: ModuleInstallCommand;
 }
 
+// Config variables
+
+/**
+ * A value a module may publish as a config variable.
+ *
+ * Only primitives travel between modules: the value is substituted into
+ * another module's configuration before that module constructs.
+ */
+export type ConfigVarValue = string | number | boolean;
+
+/**
+ * The config variables a module publishes from its `construct` callback.
+ *
+ * The keys must match the names the module declares in its `package.json`
+ * under `antelopeJs.configVars`. Consumers reference them from their own
+ * configuration with `${@<moduleName>.<VAR_NAME>}`, and the core substitutes
+ * the values before constructing the consumer.
+ */
+export type ConfigVars = Record<string, ConfigVarValue>;
+
 // Config types
 
 export interface AntelopeTestConfig {
