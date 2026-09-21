@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.0.14
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.0.13...v0.0.14)
+
+### 🚀 Enhancements
+
+- **config:** Declare the config variables a module can publish ([#22](https://github.com/AntelopeJS/interface-core/pull/22))
+
+### 🏡 Chore
+
+- Align community files with the organization defaults ([#21](https://github.com/AntelopeJS/interface-core/pull/21))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.0.13
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.0.12...v0.0.13)
