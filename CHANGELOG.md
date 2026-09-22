@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.1.0
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.0.14...v0.1.0)
+
+### 🚀 Enhancements
+
+- **config:** ⚠️  Publish config variables from a provide callback ([#23](https://github.com/AntelopeJS/interface-core/pull/23))
+
+#### ⚠️ Breaking Changes
+
+- **config:** ⚠️  Publish config variables from a provide callback ([#23](https://github.com/AntelopeJS/interface-core/pull/23))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.0.14
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.0.13...v0.0.14)
