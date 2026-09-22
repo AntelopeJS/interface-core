@@ -51,14 +51,28 @@ export interface ModuleSourceLocalFolder extends ModuleSource {
 export type ConfigVarValue = string | number | boolean;
 
 /**
- * The config variables a module publishes from its `construct` callback.
+ * The config variables a module publishes from its `provide` callback.
  *
  * The keys must match the names the module declares in its `package.json`
  * under `antelopeJs.configVars`. Consumers reference them from their own
  * configuration with `${@<moduleName>.<VAR_NAME>}`, and the core substitutes
- * the values before constructing the consumer.
+ * the values before any module constructs.
  */
 export type ConfigVars = Record<string, ConfigVarValue>;
+
+/**
+ * The `provide` lifecycle callback a provider module exports.
+ *
+ * It runs before every `construct`, which is what makes the published values
+ * available to consumers whatever the order of the interface graph. A provider
+ * must therefore compute its values on its own: no other module has
+ * constructed yet, so awaiting another module's interface from `provide`
+ * deadlocks the startup. The core interfaces registered before the module
+ * lifecycle starts, `GetRuntimeInfo()` among them, remain available.
+ */
+export type ConfigVarProvider = (
+  config: unknown,
+) => Promise<ConfigVars | void> | ConfigVars | void;
 
 // Config types
 
