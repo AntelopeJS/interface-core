@@ -439,7 +439,7 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
     }
   }
 
-  /** Registers an entry with the selected provider or queues it for bootstrap. */
+  /** Registers an entry with the selected provider and keeps it for replay on (re)attach. */
   public register(id: RID<T>, ...args: RArgs<T>) {
     const requested = getRequestedProvider(this[PROXY_BRAND].identity);
     const callback = selectProvider(
@@ -449,16 +449,6 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
     );
     if (!callback && internal.testStubMode) {
       throw new MissingProviderError();
-    }
-    if (
-      !callback &&
-      !this.state.registered.has(id) &&
-      this.state.registered.size >= internal.maxPendingOperations
-    ) {
-      throw new ProviderQueueFullError(
-        this[PROXY_BRAND].identity,
-        internal.maxPendingOperations,
-      );
     }
     const ownership = getExecutionOwnership();
     this.state.registered.set(id, {

@@ -6,11 +6,11 @@
 
 ### 🚀 Enhancements
 
-- **config:** ⚠️  Publish config variables from a provide callback ([#23](https://github.com/AntelopeJS/interface-core/pull/23))
+- **config:** ⚠️ Publish config variables from a provide callback ([#23](https://github.com/AntelopeJS/interface-core/pull/23))
 
 #### ⚠️ Breaking Changes
 
-- **config:** ⚠️  Publish config variables from a provide callback ([#23](https://github.com/AntelopeJS/interface-core/pull/23))
+- **config:** ⚠️ Publish config variables from a provide callback ([#23](https://github.com/AntelopeJS/interface-core/pull/23))
 
 ### ❤️ Contributors
 
