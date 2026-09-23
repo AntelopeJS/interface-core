@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.1.1
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.1.0...v0.1.1)
+
+### 🩹 Fixes
+
+- **proxies:** Stop capping the registering proxy registry ([#25](https://github.com/AntelopeJS/interface-core/pull/25))
+
+### 🏡 Chore
+
+- Remove .git-blame-ignore-revs ([#24](https://github.com/AntelopeJS/interface-core/pull/24))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.1.0
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.0.14...v0.1.0)
