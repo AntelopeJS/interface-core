@@ -36,7 +36,7 @@ export class AmbiguousProviderError extends Error {
   }
 }
 
-/** Error emitted when an unattached proxy's bounded queue is full. */
+/** Error emitted when an unattached async proxy has too many pending calls. */
 export class ProviderQueueFullError extends Error {
   public readonly code = PROVIDER_QUEUE_FULL_CODE;
 

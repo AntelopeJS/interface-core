@@ -38,13 +38,33 @@ describe("bounded queues and resilient cleanup", () => {
     expect(await Promise.all([first, second])).to.deep.equal([2, 4]);
   });
 
-  it("bounds queued registrations", () => {
-    internal.maxPendingOperations = 1;
+  it("keeps registrations beyond the pending limit and replays them on attach", () => {
+    internal.maxPendingOperations = 2;
     const proxy = new RegisteringProxy<(id: string) => void>(
-      "test.registration-bound",
+      "test.registration-unbounded",
     );
-    proxy.register("first");
-    expect(() => proxy.register("second")).to.throw(ProviderQueueFullError);
+    const ids = ["first", "second", "third", "fourth", "fifth"];
+    for (const id of ids) {
+      expect(() => proxy.register(id)).not.to.throw();
+    }
+    const replayed: string[] = [];
+    proxy.onRegister((id) => replayed.push(id), true);
+
+    expect(replayed).to.deep.equal(ids);
+  });
+
+  it("keeps more registrations than the default pending limit", () => {
+    const proxy = new RegisteringProxy<(id: number) => void>(
+      "test.registration-default-limit",
+    );
+    const count = internal.maxPendingOperations + 1;
+    for (let id = 0; id < count; id++) {
+      proxy.register(id);
+    }
+    const replayed: number[] = [];
+    proxy.onRegister((id) => replayed.push(id), true);
+
+    expect(replayed).to.have.length(count);
   });
 
   it("continues registration cleanup after an unregister callback throws", () => {
