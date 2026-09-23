@@ -91,13 +91,13 @@ describe("findResponsibleFile", () => {
       { id: "local", dir: "/home/user/app" },
       {
         id: "dms",
-        dir: "/home/user/app/.antelope/cache/@antelopejs-private/dms",
+        dir: "/home/user/app/.antelope/cache/@antelopejs/dms",
         isImplementor: true,
       },
     ];
     const trace = [
       frame(
-        "/home/user/app/.antelope/cache/@antelopejs-private/dms/dist/interfaces/dms/page.js",
+        "/home/user/app/.antelope/cache/@antelopejs/dms/dist/interfaces/dms/page.js",
       ),
       frame("/home/user/app/dist/pages/skins.js"),
     ];
