@@ -161,3 +161,34 @@ describe("values crossing a proxy call", () => {
     expect(() => kept?.()).to.throw(ModuleContextInvalidatedError);
   });
 });
+
+describe("calls from a destroyed generation", () => {
+  it("reject instead of throwing synchronously", async () => {
+    const proxy = new AsyncProxy<(callback: Callback) => void>();
+    let thrown: unknown;
+    let result: Promise<void> | undefined;
+    const fired = new Promise<void>((resolve) => {
+      RunWithModuleContext({ module: "late", owner: "late#1" }, () => {
+        setTimeout(() => {
+          try {
+            result = proxy.call(currentModule);
+          } catch (error) {
+            thrown = error;
+          }
+          resolve();
+        }, 5);
+      });
+    });
+    RunWithModuleContext({ module: "late", owner: "late#1" }, () => {
+      Events.ModuleDestroyed.emit("late");
+    });
+
+    await fired;
+    expect(thrown).to.equal(undefined);
+    const error = await result?.then(
+      () => undefined,
+      (reason: unknown) => reason,
+    );
+    expect(error).to.be.instanceOf(ModuleContextInvalidatedError);
+  });
+});

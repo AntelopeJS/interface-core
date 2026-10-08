@@ -146,15 +146,28 @@ function releaseOwnerRegistrations(module: string, owner: string) {
   }
 }
 
-Events.ModuleDestroyed.register((module) => {
-  const owner = getDestroyedOwner(module);
+function releaseOwner(module: string, owner: string) {
   try {
     releaseOwnerRegistrations(module, owner);
   } finally {
     // Only now: nothing else may claim to act for this generation.
     invalidateModuleContext(owner);
   }
+}
+
+Events.ModuleDestroyed.register((module) => {
+  releaseOwner(module, getDestroyedOwner(module));
 });
+
+/**
+ * Releases everything an owner that is not a module generation attached or
+ * registered, and invalidates its context, as a module's destruction does.
+ *
+ * @internal Used by the core to retire an interface instance's own owner.
+ */
+export function ReleaseOwner(owner: string): void {
+  releaseOwner(owner, owner);
+}
 
 /**
  * Configuration for defining a module to be loaded into the system.

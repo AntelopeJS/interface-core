@@ -209,7 +209,12 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
 
   /** Calls the provider, or queues the call until a provider attaches. */
   public call(...args: Parameters<T>): Promise<R> {
-    const callerArgs = bindCallerArguments(args);
+    let callerArgs: Parameters<T>;
+    try {
+      callerArgs = bindCallerArguments(args);
+    } catch (error) {
+      return Promise.reject(error);
+    }
     if (this.attachment) {
       return this.invoke(this.attachment.callback, callerArgs);
     }
