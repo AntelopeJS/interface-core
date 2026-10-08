@@ -9,11 +9,14 @@ export const RUNTIME_SYMBOL = Symbol.for("@antelopejs/interface-core/runtime");
 export interface InterfaceConnection {
   /** Optional connection alias. */
   id?: string;
-  /** Resolved interface package path. */
+  /** Path to `require()` for the interface instance this connection is bound to. */
   path: string;
-  /** Module ID of the provider represented by this connection. */
-  provider: string;
-  /** Whether this provider is selected for unqualified interface calls. */
+  /**
+   * Module ID of the provider represented by this connection; absent for a
+   * connection to a self-hosted interface.
+   */
+  provider?: string;
+  /** Whether this connection is the one a plain import of the interface reaches. */
   selected: boolean;
 }
 
