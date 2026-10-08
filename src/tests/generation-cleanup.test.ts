@@ -2,12 +2,7 @@ import { expect } from "chai";
 
 import { internal } from "../internal";
 import { Events, RunWithModuleContext } from "../modules";
-import {
-  AsyncProxy,
-  EventProxy,
-  GetInterfaceProxyIdentity,
-  RegisteringProxy,
-} from "..";
+import { AsyncProxy, EventProxy, RegisteringProxy } from "..";
 
 describe("generation-owned cleanup", () => {
   afterEach(() => {
@@ -16,7 +11,6 @@ describe("generation-owned cleanup", () => {
 
   it("keeps a same-module and provider replacement after stale cleanup", async () => {
     const proxy = new AsyncProxy<() => string>("generation.async");
-    const identity = GetInterfaceProxyIdentity(proxy) as string;
     let oldLease: ReturnType<typeof proxy.onCall> | undefined;
     RunWithModuleContext(
       { module: "shared", owner: "shared#old", provider: "shared" },
@@ -45,7 +39,6 @@ describe("generation-owned cleanup", () => {
         {
           module: "consumer",
           owner: "consumer#1",
-          providerRoutes: { [identity]: "shared" },
         },
         () => proxy.call(),
       ),

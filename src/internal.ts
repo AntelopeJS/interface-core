@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 
 import { ModuleContextInvalidatedError } from "./errors";
 
-export const RUNTIME_PROTOCOL_VERSION = 3;
+export const RUNTIME_PROTOCOL_VERSION = 4;
 export const RUNTIME_SYMBOL = Symbol.for("@antelopejs/interface-core/runtime");
 
 /** Provider connection metadata visible to an interface consumer. */
@@ -40,11 +40,6 @@ export interface ProxyBrand {
   identity: string;
 }
 
-export interface RuntimeProxyState {
-  kind: ProxyBrand["kind"];
-  value: unknown;
-}
-
 export interface RuntimeCleanup {
   cleanup(): void;
   unregisterModule?(module: string): void;
@@ -78,7 +73,6 @@ export interface InterfaceRuntime {
   interfaceConnections: Record<string, Record<string, InterfaceConnection[]>>;
   executionContext: AsyncLocalStorage<ActiveModuleExecutionContext>;
   activeOwnerTokens: Map<string, symbol>;
-  proxyStates: Map<string, RuntimeProxyState>;
   nextProxyIdentity: number;
   nextLeaseGeneration: number;
   maxPendingOperations: number;
@@ -116,7 +110,6 @@ function createRuntime(): InterfaceRuntime {
     >,
     executionContext: new AsyncLocalStorage<ActiveModuleExecutionContext>(),
     activeOwnerTokens: new Map(),
-    proxyStates: new Map(),
     nextProxyIdentity: 1,
     nextLeaseGeneration: 1,
     maxPendingOperations: 1_000,
