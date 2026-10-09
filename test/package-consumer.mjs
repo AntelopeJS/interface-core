@@ -85,12 +85,10 @@ assert.equal(core.GetInterfaceProxyIdentity(core.GetRuntimeInfo.proxy), "async:r
 assert.equal(core.GetInterfaceProxyIdentity(core.ListModules.proxy), "async:modules.ListModules");
 
 const proxy = core.InterfaceFunction("package-consumer.context");
-const identity = core.GetInterfaceProxyIdentity(proxy.proxy);
 const providerContext = { module: "provider", owner: "provider#old", provider: "provider" };
 const consumerContext = {
   module: "consumer",
   owner: "consumer#1",
-  providerRoutes: { [identity]: "provider" },
 };
 
 modules.RunWithModuleContext(providerContext, () => {

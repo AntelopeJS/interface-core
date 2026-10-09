@@ -17,14 +17,6 @@ interface ForeignCore {
   GetResponsibleModule(): string | undefined;
 }
 
-interface ForeignContext {
-  owner?: string;
-}
-
-interface ForeignModules {
-  GetModuleContext(): ForeignContext | undefined;
-}
-
 describe("global runtime protocol", () => {
   let copyPath: string | undefined;
 
@@ -35,44 +27,32 @@ describe("global runtime protocol", () => {
     }
   });
 
-  it("converges compatible physical copies and accepts foreign proxy brands", async () => {
+  it("keeps each physical copy's proxies apart, while sharing module ownership", async () => {
     const temporary = mkdtempSync(join(process.cwd(), ".interface-core-copy-"));
     copyPath = join(temporary, "dist");
     cpSync(join(__dirname, ".."), copyPath, { recursive: true });
     const foreign = require(join(copyPath, "index.js")) as ForeignCore;
-    const foreignModules = require(
-      join(copyPath, "modules.js"),
-    ) as ForeignModules;
     const localProxy = new AsyncProxy<() => string>("test.cross-copy");
     const foreignProxy = new foreign.AsyncProxy("test.cross-copy");
 
-    expect(foreignProxy).not.to.be.instanceOf(AsyncProxy);
     expect(
       RunWithResponsibleModule("shared-owner", () =>
         foreign.GetResponsibleModule(),
       ),
     ).to.equal("shared-owner");
-    RunWithModuleContext(
-      { module: "provider", owner: "provider#copy", provider: "provider" },
-      () =>
-        foreign.ImplementInterface(
-          { proxy: localProxy },
-          {
-            proxy: () => foreignModules.GetModuleContext()?.owner ?? "missing",
-          },
-        ),
+    RunWithModuleContext({ module: "provider" }, () =>
+      foreign.ImplementInterface(
+        { proxy: localProxy },
+        { proxy: () => "local" },
+      ),
     );
 
-    expect(
-      await RunWithModuleContext(
-        {
-          module: "consumer",
-          owner: "consumer#copy",
-          providerRoutes: { "async:test.cross-copy": "provider" },
-        },
-        () => foreignProxy.call(),
-      ),
-    ).to.equal("provider#copy");
+    expect(await localProxy.call()).to.equal("local");
+    const foreignResult = await Promise.race([
+      foreignProxy.call(),
+      new Promise((resolve) => setTimeout(() => resolve("unattached"), 20)),
+    ]);
+    expect(foreignResult).to.equal("unattached");
   });
 
   it("fails clearly when a realm already contains an incompatible protocol", () => {

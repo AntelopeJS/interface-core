@@ -3,7 +3,6 @@ import { expect } from "chai";
 import { Events, GetModuleContext, RunWithModuleContext } from "../modules";
 import {
   AsyncProxy,
-  GetInterfaceProxyIdentity,
   ModuleContextInvalidatedError,
   RegisteringProxy,
 } from "..";
@@ -29,8 +28,6 @@ describe("provider callback context", () => {
     const outer = new AsyncProxy<() => Promise<ContextObservation[]>>(
       "context.outer",
     );
-    const nestedIdentity = GetInterfaceProxyIdentity(nested) as string;
-    const outerIdentity = GetInterfaceProxyIdentity(outer) as string;
     RunWithModuleContext(
       { module: "nested-owner", owner: "nested#1", provider: "nested" },
       () => nested.onCall(() => `${observeContext().owner}:value`),
@@ -40,7 +37,6 @@ describe("provider callback context", () => {
         module: "provider-owner",
         owner: "provider-owner#1",
         provider: "provider-a",
-        providerRoutes: { [nestedIdentity]: "nested" },
       },
       () =>
         outer.onCall(async () => {
@@ -56,7 +52,6 @@ describe("provider callback context", () => {
       {
         module: "consumer",
         owner: "consumer#1",
-        providerRoutes: { [outerIdentity]: "provider-a" },
       },
       () => outer.call(),
     );
@@ -74,7 +69,6 @@ describe("provider callback context", () => {
     const proxy = new RegisteringProxy<(id: string) => void>(
       "context.registering",
     );
-    const identity = GetInterfaceProxyIdentity(proxy) as string;
     const observations: Array<{
       operation: string;
       context: ContextObservation;
@@ -103,7 +97,6 @@ describe("provider callback context", () => {
       {
         module: "consumer",
         owner: "consumer#1",
-        providerRoutes: { [identity]: "provider" },
       },
       () => {
         proxy.register("direct");
@@ -149,7 +142,6 @@ describe("provider callback context", () => {
 
   it("rejects callbacks captured from an invalidated owner", async () => {
     const proxy = new AsyncProxy<() => string>("context.invalidated");
-    const identity = GetInterfaceProxyIdentity(proxy) as string;
     RunWithModuleContext(
       { module: "provider", owner: "provider-old#1", provider: "provider" },
       () => {
@@ -162,7 +154,6 @@ describe("provider callback context", () => {
       {
         module: "consumer",
         owner: "consumer#1",
-        providerRoutes: { [identity]: "provider" },
       },
       () =>
         proxy.call().then(

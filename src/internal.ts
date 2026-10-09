@@ -2,18 +2,21 @@ import { AsyncLocalStorage } from "node:async_hooks";
 
 import { ModuleContextInvalidatedError } from "./errors";
 
-export const RUNTIME_PROTOCOL_VERSION = 3;
+export const RUNTIME_PROTOCOL_VERSION = 4;
 export const RUNTIME_SYMBOL = Symbol.for("@antelopejs/interface-core/runtime");
 
 /** Provider connection metadata visible to an interface consumer. */
 export interface InterfaceConnection {
   /** Optional connection alias. */
   id?: string;
-  /** Resolved interface package path. */
+  /** Path to `require()` for the interface instance this connection is bound to. */
   path: string;
-  /** Module ID of the provider represented by this connection. */
-  provider: string;
-  /** Whether this provider is selected for unqualified interface calls. */
+  /**
+   * Module ID of the provider represented by this connection; absent for a
+   * connection to a self-hosted interface.
+   */
+  provider?: string;
+  /** Whether this connection is the one a plain import of the interface reaches. */
   selected: boolean;
 }
 
@@ -38,11 +41,6 @@ export interface ProxyBrand {
   protocol: number;
   kind: "async" | "registering" | "event";
   identity: string;
-}
-
-export interface RuntimeProxyState {
-  kind: ProxyBrand["kind"];
-  value: unknown;
 }
 
 export interface RuntimeCleanup {
@@ -78,7 +76,6 @@ export interface InterfaceRuntime {
   interfaceConnections: Record<string, Record<string, InterfaceConnection[]>>;
   executionContext: AsyncLocalStorage<ActiveModuleExecutionContext>;
   activeOwnerTokens: Map<string, symbol>;
-  proxyStates: Map<string, RuntimeProxyState>;
   nextProxyIdentity: number;
   nextLeaseGeneration: number;
   maxPendingOperations: number;
@@ -116,7 +113,6 @@ function createRuntime(): InterfaceRuntime {
     >,
     executionContext: new AsyncLocalStorage<ActiveModuleExecutionContext>(),
     activeOwnerTokens: new Map(),
-    proxyStates: new Map(),
     nextProxyIdentity: 1,
     nextLeaseGeneration: 1,
     maxPendingOperations: 1_000,

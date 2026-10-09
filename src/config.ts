@@ -95,9 +95,16 @@ export interface AntelopeConfig {
   test?: AntelopeTestConfig;
 }
 
+/**
+ * Binds an interface a module uses, directly or through the interfaces it uses,
+ * to one provider module. The first entry for an interface pins it; further
+ * entries are connections reached by `id`. An entry for a standalone interface
+ * may omit `source`: it then declares a connection to the self-hosted interface,
+ * built on that connection's other bindings.
+ */
 export interface ImportOverride {
   interface: string;
-  source: string;
+  source?: string;
   id?: string;
 }
 
@@ -111,6 +118,13 @@ export interface AntelopeModuleConfig {
   config?: unknown;
   importOverrides?: ImportOverride[] | Record<string, string>;
   disabledExports?: string[];
+  /**
+   * Priority of this module as the default provider of the interfaces it
+   * implements, keyed by interface name. The provider with the highest priority
+   * is chosen where nothing pins the interface; unlisted interfaces have
+   * priority 0.
+   */
+  exportPriority?: Record<string, number>;
 }
 
 export interface AntelopeLogging {
