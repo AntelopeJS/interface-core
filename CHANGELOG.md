@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.2.0
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.1.1...v0.2.0)
+
+### 🚀 Enhancements
+
+- **proxies:** ⚠️  Give each proxy one provider and its own state ([#30](https://github.com/AntelopeJS/interface-core/pull/30))
+
+### ✅ Tests
+
+- Use the public dms scope in the responsible-module fixture ([#28](https://github.com/AntelopeJS/interface-core/pull/28))
+
+### 🤖 CI
+
+- **release:** Release next from a dedicated branch and restore requireCommits ([#26](https://github.com/AntelopeJS/interface-core/pull/26))
+- **release:** Reference the shared release workflows through v1 ([#27](https://github.com/AntelopeJS/interface-core/pull/27))
+
+#### ⚠️ Breaking Changes
+
+- **proxies:** ⚠️  Give each proxy one provider and its own state ([#30](https://github.com/AntelopeJS/interface-core/pull/30))
+
+### ❤️ Contributors
+
+- Thomas ([@Thomasims](http://github.com/Thomasims))
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.1.1
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.1.0...v0.1.1)
