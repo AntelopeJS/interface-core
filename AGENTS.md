@@ -1,5 +1,9 @@
 # antelopejs
 
+## Versioning
+
+`@antelopejs/core` implements this interface, and `ImplementInterface` refuses a provider that lacks a declared function. Adding a function or a member a provider must implement, or changing a signature, is therefore a breaking change for providers: release it as a new minor (`0.x.0`), never a patch. The core caps its range below the next minor (`>=0.2.2 <0.3.0`), so a published core never resolves an interface it does not implement; modules that only call the interface keep wide ranges.
+
 ## Code Conventions
 
 ### Critical Rules
