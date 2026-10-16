@@ -190,8 +190,9 @@ export interface ModuleDefinition {
   config?: unknown;
 
   /**
-   * Optional mapping of import paths to alternative paths.
-   * Can be used to redirect imports to different modules than requested.
+   * Runtime import override map with array values.
+   * This differs intentionally from AntelopeModuleConfig.importOverrides,
+   * the project-file contract used by defineConfig and SaveModuleDeclaration.
    */
   importOverrides?: Record<string, string[]>;
 

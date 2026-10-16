@@ -251,7 +251,14 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
   }
 }
 
-/** Creates an interface function backed by an asynchronous proxy. */
+/**
+ * Creates a callable interface function backed by an asynchronous proxy.
+ * The typed contract always returns a Promise. Use ImplementInterface to attach
+ * a provider; the runtime-only `.proxy` property is absent from the return type.
+ * Construct AsyncProxy directly when typed attachment/lease control is needed.
+ *
+ * @param identity Optional diagnostic name for the underlying proxy.
+ */
 export function InterfaceFunction<
   T extends Func = Func,
   R = Awaited<ReturnType<T>>,
@@ -273,7 +280,10 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
     internal.registeringProxies.add(this);
   }
 
-  /** Attaches a register callback. */
+  /**
+   * Attaches only the register callback, then replays stored registrations.
+   * Returns a lease for this callback; an existing unregister callback remains.
+   */
   public onRegister(callback: T, manualDetach?: boolean): AttachmentLease {
     return this.attachRegister(bindProviderCallback(callback), {
       owner: getAttachmentOwner(manualDetach),
@@ -295,7 +305,11 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
     return this.attachUnregister(bindProviderCallback(callback), options);
   }
 
-  /** Atomically attaches both registration handlers. */
+  /**
+   * Installs both callbacks under one lease before replaying registrations.
+   * Replay reports synchronous failures and continues; provider side effects
+   * are not rolled back. Pass the returned lease to detach both callbacks safely.
+   */
   public onHandlers(
     register: T,
     unregister: (id: RID<T>) => void,

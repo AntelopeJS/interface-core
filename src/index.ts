@@ -234,11 +234,14 @@ function isThenable(value: unknown): value is PromiseLike<unknown> {
  * Implements an interface with the provided implementation.
  *
  * Links a declared interface with its implementation, setting up the necessary proxies
- * and event handlers to enable cross-module communication.
+ * for cross-module communication. EventProxy declarations need no implementation.
+ * Validates all required handlers before attaching: async proxies need a function,
+ * and registering proxies need both register and unregister callbacks.
  *
  * @param declaration The interface declaration to implement
  * @param implementation The implementation of the interface
  * @returns An object containing the declaration and implementation
+ * @throws {TypeError} For malformed arguments, object cycles, or missing handlers.
  */
 export function ImplementInterface<
   T extends Record<string, unknown>,

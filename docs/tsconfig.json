@@ -1,0 +1,16 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "rootDir": "..",
+    "composite": false,
+    "incremental": false,
+    "noEmit": true,
+    "paths": {
+      "@antelopejs/interface-core": ["../src/index.ts"],
+      "@antelopejs/interface-core/*": ["../src/*"]
+    }
+  },
+  "include": ["../src", "./**/*.ts"]
+}
