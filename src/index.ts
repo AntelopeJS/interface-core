@@ -13,6 +13,7 @@ import {
 
 export * from "./errors";
 export type { InterfaceConnection } from "./internal";
+export type { InterfaceFunctionOptions } from "./proxies";
 export {
   AsyncProxy,
   EventProxy,
@@ -99,6 +100,7 @@ type InterfaceToImpl<T> = T extends infer P
   : never;
 
 interface AsyncProxyProtocol {
+  readonly optional?: boolean;
   onCall(callback: Func): unknown;
 }
 
@@ -143,6 +145,14 @@ function requireFunction(value: unknown, path: string): Func {
   return value as Func;
 }
 
+/** The callback of an optional function a provider leaves out. */
+function notImplemented(path: string): Func {
+  return () =>
+    Promise.reject(
+      new Error(`This provider does not implement ${path}: update it.`),
+    );
+}
+
 function planProxyAttachment(
   proxy: unknown,
   implementation: unknown,
@@ -152,6 +162,10 @@ function planProxyAttachment(
     return;
   }
   if (IsInterfaceProxy(proxy, "async")) {
+    const asyncProxy = proxy as AsyncProxyProtocol;
+    if (implementation === undefined && asyncProxy.optional) {
+      return { attach: () => asyncProxy.onCall(notImplemented(path)) };
+    }
     const callback = requireFunction(implementation, path);
     return {
       attach: () => (proxy as AsyncProxyProtocol).onCall(callback),

@@ -179,11 +179,21 @@ export function RunWithResponsibleModule<T>(
 /** Proxy for an asynchronous interface function, served by a single provider. */
 export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
   public readonly [PROXY_BRAND]: ProxyBrand;
+  /**
+   * Whether a provider may leave this function out: added to an interface
+   * after providers already implemented it, so an older provider still
+   * implements the interface, and a call rejects instead.
+   */
+  public readonly optional: boolean;
   private attachment?: Attachment<T>;
   private queue: Array<PendingCall<T, R>> = [];
 
-  public constructor(identity?: string) {
+  public constructor(
+    identity?: string,
+    options: InterfaceFunctionOptions = {},
+  ) {
     this[PROXY_BRAND] = createBrand("async", identity);
+    this.optional = options.optional === true;
   }
 
   /** Attaches the provider callback, replacing any previous one, and replays queued calls. */
@@ -251,12 +261,25 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
   }
 }
 
+/** How a provider may implement an interface function. */
+export interface InterfaceFunctionOptions {
+  /**
+   * The provider may leave the function out. Declare a function added to an
+   * existing interface this way: a provider built before it still implements
+   * the interface, and calling the function there rejects.
+   */
+  optional?: boolean;
+}
+
 /** Creates an interface function backed by an asynchronous proxy. */
 export function InterfaceFunction<
   T extends Func = Func,
   R = Awaited<ReturnType<T>>,
->(identity?: string): (...args: Parameters<T>) => Promise<R> {
-  const proxy = new AsyncProxy<T, R>(identity);
+>(
+  identity?: string,
+  options?: InterfaceFunctionOptions,
+): (...args: Parameters<T>) => Promise<R> {
+  const proxy = new AsyncProxy<T, R>(identity, options);
   const func = (...args: Parameters<T>) => proxy.call(...args);
   func.proxy = proxy;
   return func;
