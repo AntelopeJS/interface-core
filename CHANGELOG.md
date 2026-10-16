@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.2.2
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.2.1...v0.2.2)
+
+### 🩹 Fixes
+
+- **proxies:** Let a provider leave out an interface function added after it ([#33](https://github.com/AntelopeJS/interface-core/pull/33))
+- **proxies:** Pass classes across a proxy call unchanged ([#34](https://github.com/AntelopeJS/interface-core/pull/34))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.2.1
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.2.0...v0.2.1)
