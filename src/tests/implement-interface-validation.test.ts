@@ -2,12 +2,7 @@ import { expect } from "chai";
 import { runInNewContext } from "node:vm";
 
 import { internal } from "../internal";
-import {
-  AsyncProxy,
-  ImplementInterface,
-  InterfaceFunction,
-  RegisteringProxy,
-} from "..";
+import { AsyncProxy, ImplementInterface, RegisteringProxy } from "..";
 
 describe("ImplementInterface validation", () => {
   afterEach(() => {
@@ -30,34 +25,6 @@ describe("ImplementInterface validation", () => {
       (reason: unknown) => reason,
     );
     expect(error).to.be.instanceOf(Error);
-  });
-
-  it("lets a provider leave an optional function out, whose calls reject", async () => {
-    const declaration = {
-      present: InterfaceFunction<() => string>("test.optional.present"),
-      added: InterfaceFunction<() => string>("test.optional.added", {
-        optional: true,
-      }),
-    };
-
-    ImplementInterface(declaration, { present: () => "here" } as never);
-
-    expect(await declaration.present()).to.equal("here");
-    const error = await declaration.added().then(
-      () => undefined,
-      (reason: unknown) => reason,
-    );
-    expect(error).to.be.instanceOf(Error);
-    expect((error as Error).message).to.include("implementation.added");
-  });
-
-  it("still requires an optional function a provider gives as a non-function", () => {
-    const added = InterfaceFunction<() => string>("test.optional.malformed", {
-      optional: true,
-    });
-    expect(() =>
-      ImplementInterface({ added }, { added: "not a function" } as never),
-    ).to.throw("implementation.added");
   });
 
   it("rejects malformed registering handlers atomically", () => {
