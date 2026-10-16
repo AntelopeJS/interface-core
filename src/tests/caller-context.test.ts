@@ -102,6 +102,25 @@ describe("values crossing a proxy call", () => {
     expect(received[2]).to.equal(instance);
   });
 
+  it("passes a class, and a plain object holding only classes, through unchanged", async () => {
+    class Target {}
+    const holder = { target: Target };
+    const received: unknown[] = [];
+    const proxy = new AsyncProxy<(...values: unknown[]) => void>();
+    RunWithModuleContext({ module: "provider" }, () => {
+      proxy.onCall((...values) => {
+        received.push(...values);
+      });
+    });
+
+    await RunWithModuleContext({ module: "consumer" }, () =>
+      proxy.call(Target, holder),
+    );
+
+    expect(received[0]).to.equal(Target);
+    expect(received[1]).to.equal(holder);
+  });
+
   it("hands the provider one binding for a function passed twice, so later calls can pair it", () => {
     const proxy = new RegisteringProxy<
       (id: string, callback: Callback) => void
