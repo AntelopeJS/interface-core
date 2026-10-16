@@ -20,10 +20,21 @@ export interface InterfaceConnection {
   selected: boolean;
 }
 
+/**
+ * What a context runs: a module generation's work, or an interface package's
+ * own work, entered while the package is evaluated.
+ */
+export type ModuleContextKind = "module" | "interface";
+
 /** Module identity and provider routes propagated through asynchronous work. */
 export interface ModuleExecutionContext {
   /** Stable module ID used by existing lifecycle and attribution APIs. */
   module: string;
+  /**
+   * `"interface"` for an interface package's own context. An attachment made
+   * in it runs its callbacks in the caller's context. Defaults to `"module"`.
+   */
+  kind?: ModuleContextKind;
   /** Unique lifecycle generation ID. Defaults to the module ID when omitted. */
   owner?: string;
   /** Provider ID used when attaching implementations. */
@@ -32,7 +43,7 @@ export interface ModuleExecutionContext {
   providerRoutes?: Readonly<Record<string, string>>;
 }
 
-interface ActiveModuleExecutionContext extends ModuleExecutionContext {
+export interface ActiveModuleExecutionContext extends ModuleExecutionContext {
   owner: string;
   ownershipToken: symbol;
 }
@@ -160,10 +171,16 @@ function getOwnerToken(owner: string): symbol {
   return token;
 }
 
+export function isModuleContextActive(
+  context: ActiveModuleExecutionContext,
+): boolean {
+  return (
+    internal.activeOwnerTokens.get(context.owner) === context.ownershipToken
+  );
+}
+
 function assertActiveModuleContext(context: ActiveModuleExecutionContext) {
-  if (
-    internal.activeOwnerTokens.get(context.owner) !== context.ownershipToken
-  ) {
+  if (!isModuleContextActive(context)) {
     throw new ModuleContextInvalidatedError(context.module);
   }
 }
@@ -204,6 +221,24 @@ export function runWithCapturedModuleContext<T>(
 ): T {
   assertActiveModuleContext(context);
   return internal.executionContext.run(context, callback);
+}
+
+export function runAsCapturedCaller<T>(
+  context: ActiveModuleExecutionContext | undefined,
+  callback: () => T,
+): T {
+  return context
+    ? internal.executionContext.run(context, callback)
+    : internal.executionContext.exit(callback);
+}
+
+export function enterModuleContext<T>(
+  context: ActiveModuleExecutionContext | undefined,
+  callback: () => T,
+): T {
+  return context
+    ? internal.executionContext.run(context, callback)
+    : callback();
 }
 
 export function peekModuleContext(): ModuleExecutionContext | undefined {
