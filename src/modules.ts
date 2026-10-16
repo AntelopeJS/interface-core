@@ -342,7 +342,7 @@ export type ModuleDeclarationChanges = Partial<ModuleDeclaration>;
  */
 export const ListModuleDeclarations = InterfaceFunction<
   () => Record<string, ModuleDeclaration>
->("modules.ListModuleDeclarations");
+>("modules.ListModuleDeclarations", { optional: true });
 
 /**
  * Write a module's declaration into the project's configuration file.
@@ -360,7 +360,7 @@ export const ListModuleDeclarations = InterfaceFunction<
  */
 export const SaveModuleDeclaration = InterfaceFunction<
   (module: string, changes: ModuleDeclarationChanges) => void
->("modules.SaveModuleDeclaration");
+>("modules.SaveModuleDeclaration", { optional: true });
 
 /**
  * Remove a module's entry from the project's configuration file, leaving the
@@ -370,4 +370,4 @@ export const SaveModuleDeclaration = InterfaceFunction<
  */
 export const RemoveModuleDeclaration = InterfaceFunction<
   (module: string) => void
->("modules.RemoveModuleDeclaration");
+>("modules.RemoveModuleDeclaration", { optional: true });
