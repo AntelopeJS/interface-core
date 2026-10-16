@@ -1,3 +1,4 @@
+import type { AntelopeModuleConfig } from "./config";
 import { EventProxy, InterfaceFunction } from "./proxies";
 import {
   getModuleContext,
@@ -317,3 +318,56 @@ export const DestroyModule = InterfaceFunction<(module: string) => void>(
 export const ReloadModule = InterfaceFunction<(module: string) => void>(
   "modules.ReloadModule",
 );
+
+/**
+ * A module as the project's configuration file declares it, under its key in
+ * `modules`, with the shorthand forms expanded.
+ */
+export type ModuleDeclaration = Pick<
+  AntelopeModuleConfig,
+  "source" | "config" | "disabled" | "optional"
+>;
+
+/**
+ * The fields of a module's declaration to write. A field left out keeps what
+ * the file already holds.
+ */
+export type ModuleDeclarationChanges = Partial<ModuleDeclaration>;
+
+/**
+ * List the modules the project's configuration file declares, by key,
+ * disabled ones included.
+ *
+ * @returns The declarations of the top-level `modules` of the file
+ */
+export const ListModuleDeclarations = InterfaceFunction<
+  () => Record<string, ModuleDeclaration>
+>("modules.ListModuleDeclarations");
+
+/**
+ * Write a module's declaration into the project's configuration file.
+ *
+ * Only the given fields of the module's entry are rewritten, and the entry is
+ * added when the file has none: every other line of the file, comments and
+ * expressions included, stays as it was. The running project is not
+ * restarted for this write; the caller loads, stops or reloads the module
+ * itself.
+ *
+ * @param module The module's key in `modules`
+ * @param changes The fields to write
+ * @throws Error if the file has no `modules` object it can edit, such as a
+ *   configuration built by a function
+ */
+export const SaveModuleDeclaration = InterfaceFunction<
+  (module: string, changes: ModuleDeclarationChanges) => void
+>("modules.SaveModuleDeclaration");
+
+/**
+ * Remove a module's entry from the project's configuration file, leaving the
+ * rest of the file as it was and the running project unrestarted.
+ *
+ * @param module The module's key in `modules`
+ */
+export const RemoveModuleDeclaration = InterfaceFunction<
+  (module: string) => void
+>("modules.RemoveModuleDeclaration");

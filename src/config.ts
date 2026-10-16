@@ -125,6 +125,18 @@ export interface AntelopeModuleConfig {
    * priority 0.
    */
   exportPriority?: Record<string, number>;
+  /**
+   * Keeps the module declared, with its configuration, without loading it.
+   * A disabled module is left out of the project as if it were not listed.
+   */
+  disabled?: boolean;
+  /**
+   * Lets the project start without this module. An optional module is
+   * loaded once the others have started; when it fails to download,
+   * construct or start, the failure is logged and the project runs on
+   * without it.
+   */
+  optional?: boolean;
 }
 
 export interface AntelopeLogging {
