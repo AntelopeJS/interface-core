@@ -12,6 +12,15 @@ const bindingsBySource = new WeakMap<
   WeakMap<CapturedContext, BindableValue>
 >();
 const boundValues = new WeakSet<BindableValue>();
+const CLASS_SOURCE = /^class\b/;
+
+function isClass(value: Callable): boolean {
+  return CLASS_SOURCE.test(Function.prototype.toString.call(value));
+}
+
+function isBindableFunction(value: unknown): value is Callable {
+  return typeof value === "function" && !isClass(value as Callable);
+}
 
 function hasPlainPrototype(value: NonNullable<unknown>): boolean {
   if (Array.isArray(value)) {
@@ -31,7 +40,7 @@ function isBindableContainer(value: unknown): value is PlainContainer {
 }
 
 function holdsFunction(value: unknown, visited: Set<object>): boolean {
-  if (typeof value === "function") {
+  if (isBindableFunction(value)) {
     return true;
   }
   if (!isBindableContainer(value) || visited.has(value)) {
@@ -43,7 +52,7 @@ function holdsFunction(value: unknown, visited: Set<object>): boolean {
 
 function needsBinding(value: unknown): value is BindableValue {
   if (typeof value === "function") {
-    return !boundValues.has(value as Callable);
+    return isBindableFunction(value) && !boundValues.has(value);
   }
   return (
     isBindableContainer(value) &&
@@ -112,7 +121,8 @@ function bindValue(value: unknown, context: CapturedContext): unknown {
  * module context, so they run as the caller's work whoever invokes them.
  *
  * Functions, and functions held in plain objects and arrays, are bound; plain
- * data, class instances and proxies cross unchanged. A value is bound once per
+ * data, classes, class instances and proxies cross unchanged, so a class keeps
+ * the identity its metadata and registries are keyed by. A value is bound once per
  * context, and a value that is already bound keeps its original context.
  */
 export function bindCallerArguments<T extends unknown[]>(args: T): T {
