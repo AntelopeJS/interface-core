@@ -67,14 +67,14 @@ An interface function always returns a promise, even when the implementation is 
 
 ## Documentation
 
-- [Introduction](https://interfaces.antelopejs.com/docs/core/introduction)
-- [Proxies](https://interfaces.antelopejs.com/docs/core/proxies)
-- [Decorators](https://interfaces.antelopejs.com/docs/core/decorators)
-- [Metadata](https://interfaces.antelopejs.com/docs/core/metadata)
-- [Modules](https://interfaces.antelopejs.com/docs/core/modules)
-- [Logging](https://interfaces.antelopejs.com/docs/core/logging)
-- [Configuration](https://interfaces.antelopejs.com/docs/core/configuration)
-- [Runtime](https://interfaces.antelopejs.com/docs/core/runtime)
+- [Introduction](./docs/1.introduction.md)
+- [Proxies, attachment leases and errors](./docs/2.proxies.md)
+- [Decorators](./docs/3.decorators.md)
+- [Metadata](./docs/4.metadata.md)
+- [Modules](./docs/5.modules.md)
+- [Logging](./docs/6.logging.md)
+- [Configuration](./docs/7.configuration.md)
+- [Runtime](./docs/8.runtime.md)
 
 ## Compatibility
 
