@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.2.3
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.2.2...v0.2.3)
+
+### 🩹 Fixes
+
+- **proxies:** Require every interface function of a provider again ([#35](https://github.com/AntelopeJS/interface-core/pull/35))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.2.2
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.2.1...v0.2.2)
