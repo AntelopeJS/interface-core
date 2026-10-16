@@ -1,12 +1,19 @@
 {
   "name": "@antelopejs/interface-core",
   "version": "0.2.3",
-  "description": "AntelopeJS core interface primitives - proxies, decorators, interface functions, and logging",
+  "description": "AntelopeJS core interface primitives: proxies, interface functions, decorators, module lifecycle, logging and configuration",
   "keywords": [
     "antelopejs",
     "core",
-    "interface"
+    "decorators",
+    "interface",
+    "logging",
+    "proxy"
   ],
+  "homepage": "https://interfaces.antelopejs.com/docs/core",
+  "bugs": {
+    "url": "https://github.com/AntelopeJS/interface-core/issues"
+  },
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
