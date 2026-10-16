@@ -188,7 +188,10 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
   private attachment?: Attachment<T>;
   private queue: Array<PendingCall<T, R>> = [];
 
-  public constructor(identity?: string, options: InterfaceFunctionOptions = {}) {
+  public constructor(
+    identity?: string,
+    options: InterfaceFunctionOptions = {},
+  ) {
     this[PROXY_BRAND] = createBrand("async", identity);
     this.optional = options.optional === true;
   }
