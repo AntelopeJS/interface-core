@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.2.4
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.2.3...v0.2.4)
+
+### 📖 Documentation
+
+- Rewrite the README ([#36](https://github.com/AntelopeJS/interface-core/pull/36))
+- Streamline agent guidance and preserve repository contracts ([#37](https://github.com/AntelopeJS/interface-core/pull/37))
+- Document proxy leases and distinct module contracts ([#38](https://github.com/AntelopeJS/interface-core/pull/38))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.2.3
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.2.2...v0.2.3)
