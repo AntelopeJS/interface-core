@@ -1,6 +1,6 @@
 {
   "name": "@antelopejs/interface-core",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "AntelopeJS core interface primitives: proxies, interface functions, decorators, module lifecycle, logging and configuration",
   "keywords": [
     "antelopejs",

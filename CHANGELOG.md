@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.2.5
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.2.4...v0.2.5)
+
+### 🩹 Fixes
+
+- **proxies:** Ownership follows the call chain, with no context wrappers ([#42](https://github.com/AntelopeJS/interface-core/pull/42))
+
+### 📖 Documentation
+
+- Improve task-based onboarding and contract guidance ([#39](https://github.com/AntelopeJS/interface-core/pull/39))
+- Clarify learning paths and illustrate real outcomes ([#41](https://github.com/AntelopeJS/interface-core/pull/41))
+
+### ❤️ Contributors
+
+- Thomas ([@Thomasims](http://github.com/Thomasims))
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.2.4
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.2.3...v0.2.4)
