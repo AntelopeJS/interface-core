@@ -1,14 +1,19 @@
-import { findResponsibleFile } from "./responsible-module";
-import { bindCallerArguments, bindCallerFunction } from "./caller-binding";
-import { MissingProviderError, ProviderQueueFullError } from "./errors";
 import {
+  MissingProviderError,
+  ModuleContextInvalidatedError,
+  ProviderQueueFullError,
+} from "./errors";
+import {
+  type ActiveModuleExecutionContext,
   captureModuleContext,
+  enterModuleContext,
   getModuleContext,
   internal,
   invalidateModuleContext,
+  isModuleContextActive,
   type ProxyBrand,
+  runAsCapturedCaller,
   RUNTIME_PROTOCOL_VERSION,
-  runWithCapturedModuleContext,
   runWithModuleContext,
 } from "./internal";
 
@@ -20,6 +25,7 @@ type ProxyKind = ProxyBrand["kind"];
 
 const PROXY_BRAND = Symbol.for("@antelopejs/interface-core/proxy");
 const DEFAULT_OWNER = "@antelopejs/interface-core/default-provider";
+const INTERFACE_CONTEXT_KIND = "interface";
 
 /** The handle of one provider attachment, used to detach exactly that attachment. */
 export interface AttachmentLease {
@@ -29,10 +35,12 @@ export interface AttachmentLease {
 
 interface Attachment<T> extends AttachmentLease {
   callback: T;
+  context?: ActiveModuleExecutionContext;
 }
 
 interface PendingCall<T extends Func, R> {
   args: Parameters<T>;
+  caller?: ActiveModuleExecutionContext;
   resolve: (value: R | PromiseLike<R>) => void;
   reject: (reason?: any) => void;
 }
@@ -61,7 +69,7 @@ interface EventEntry<T extends Func> {
   module?: string;
   owner?: string;
   func: T;
-  handler: T;
+  context?: ActiveModuleExecutionContext;
 }
 
 function createIdentity(kind: ProxyKind, identity?: string) {
@@ -104,24 +112,27 @@ export function GetInterfaceProxyIdentity(value: unknown): string | undefined {
   return readBrand(value)?.identity;
 }
 
-function getAttachmentOwner(manualDetach?: boolean): string {
+function getAttachmentOwner(): string {
   const context = getModuleContext();
-  const responsible =
-    manualDetach || context?.module ? undefined : GetResponsibleModule();
-  return context?.owner ?? context?.module ?? responsible ?? DEFAULT_OWNER;
+  return context?.owner ?? context?.module ?? DEFAULT_OWNER;
 }
 
 function createLease(owner: string): AttachmentLease {
   return { owner, generation: internal.nextLeaseGeneration++ };
 }
 
-function bindProviderCallback<T extends Func>(callback: T): T {
+function captureProviderContext(): ActiveModuleExecutionContext | undefined {
   const context = captureModuleContext();
-  if (!context) {
-    return callback;
-  }
-  return ((...args: Parameters<T>) =>
-    runWithCapturedModuleContext(context, () => callback(...args))) as T;
+  return context?.kind === INTERFACE_CONTEXT_KIND ? undefined : context;
+}
+
+function runAttachment<T extends Func, R>(
+  attachment: Attachment<T>,
+  invoke: (callback: T) => R,
+): R {
+  return enterModuleContext(attachment.context, () =>
+    invoke(attachment.callback),
+  );
 }
 
 interface ExecutionOwnership {
@@ -131,11 +142,10 @@ interface ExecutionOwnership {
 
 function getExecutionOwnership(): ExecutionOwnership {
   const context = getModuleContext();
-  if (context) {
-    return { module: context.module, owner: context.owner ?? context.module };
+  if (!context) {
+    return {};
   }
-  const module = GetResponsibleModule();
-  return { module, owner: module };
+  return { module: context.module, owner: context.owner ?? context.module };
 }
 
 function reportRuntimeError(
@@ -186,17 +196,24 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
     this[PROXY_BRAND] = createBrand("async", identity);
   }
 
-  /** Attaches the provider callback, replacing any previous one, and replays queued calls. */
+  /**
+   * Attaches the provider callback, replacing any previous one, and replays
+   * queued calls. The callback runs in the context it was attached in.
+   */
   public onCall(callback: T, manualDetach?: boolean): AttachmentLease {
-    const lease = createLease(getAttachmentOwner(manualDetach));
-    const providerCallback = bindProviderCallback(callback);
-    this.attachment = { callback: providerCallback, ...lease };
+    const lease = createLease(getAttachmentOwner());
+    const attachment = {
+      callback,
+      context: captureProviderContext(),
+      ...lease,
+    };
+    this.attachment = attachment;
     if (!manualDetach) {
       internal.addAsyncProxy(lease.owner, {
         cleanup: () => this.detach(lease),
       });
     }
-    this.replayQueue(providerCallback);
+    this.replayQueue(attachment);
     return lease;
   }
 
@@ -209,14 +226,14 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
 
   /** Calls the provider, or queues the call until a provider attaches. */
   public call(...args: Parameters<T>): Promise<R> {
-    let callerArgs: Parameters<T>;
+    let caller: ActiveModuleExecutionContext | undefined;
     try {
-      callerArgs = bindCallerArguments(args);
+      caller = captureModuleContext();
     } catch (error) {
       return Promise.reject(error);
     }
     if (this.attachment) {
-      return this.invoke(this.attachment.callback, callerArgs);
+      return this.invoke(this.attachment, args);
     }
     if (internal.testStubMode) {
       return Promise.reject(new MissingProviderError());
@@ -230,23 +247,31 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
       );
     }
     return new Promise<R>((resolve, reject) => {
-      this.queue.push({ args: callerArgs, resolve, reject });
+      this.queue.push({ args, caller, resolve, reject });
     });
   }
 
-  private invoke(callback: T, args: Parameters<T>): Promise<R> {
+  private invoke(attachment: Attachment<T>, args: Parameters<T>): Promise<R> {
     try {
-      return Promise.resolve(callback(...args));
+      return Promise.resolve(
+        runAttachment(attachment, (callback) => callback(...args)),
+      );
     } catch (error) {
       return Promise.reject(error);
     }
   }
 
-  private replayQueue(callback: T) {
+  private replayQueue(attachment: Attachment<T>) {
     const pending = this.queue;
     this.queue = [];
     for (const call of pending) {
-      this.invoke(callback, call.args).then(call.resolve, call.reject);
+      if (call.caller && !isModuleContextActive(call.caller)) {
+        call.reject(new ModuleContextInvalidatedError(call.caller.module));
+        continue;
+      }
+      runAsCapturedCaller(call.caller, () =>
+        this.invoke(attachment, call.args),
+      ).then(call.resolve, call.reject);
     }
   }
 }
@@ -281,12 +306,13 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
   }
 
   /**
-   * Attaches only the register callback, then replays stored registrations.
-   * Returns a lease for this callback; an existing unregister callback remains.
+   * Attaches only the register callback, run in the context it was attached in,
+   * then replays stored registrations. Returns a lease for this callback; an
+   * existing unregister callback remains.
    */
   public onRegister(callback: T, manualDetach?: boolean): AttachmentLease {
-    return this.attachRegister(bindProviderCallback(callback), {
-      owner: getAttachmentOwner(manualDetach),
+    return this.attachRegister(callback, {
+      owner: getAttachmentOwner(),
       manualDetach: Boolean(manualDetach),
     });
   }
@@ -302,7 +328,7 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
     const options: AttachmentOptions = sibling
       ? { owner: sibling.owner, manualDetach: sibling.manualDetach }
       : { owner: getAttachmentOwner(), manualDetach: false };
-    return this.attachUnregister(bindProviderCallback(callback), options);
+    return this.attachUnregister(callback, options);
   }
 
   /**
@@ -315,15 +341,18 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
     unregister: (id: RID<T>) => void,
     manualDetach?: boolean,
   ): AttachmentLease {
-    const lease = createLease(getAttachmentOwner(manualDetach));
-    const boundRegister = bindProviderCallback(register);
-    const boundUnregister = bindProviderCallback(unregister);
+    const lease = createLease(getAttachmentOwner());
+    const registerAttachment = this.createAttachment(
+      register,
+      lease,
+      manualDetach,
+    );
     this.handlers = {
-      register: this.createAttachment(boundRegister, lease, manualDetach),
-      unregister: this.createAttachment(boundUnregister, lease, manualDetach),
+      register: registerAttachment,
+      unregister: this.createAttachment(unregister, lease, manualDetach),
     };
     this.trackAttachment(lease, Boolean(manualDetach));
-    this.replayRegistrations(boundRegister);
+    this.replayRegistrations(registerAttachment);
     return lease;
   }
 
@@ -343,13 +372,14 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
 
   /** Registers an entry with the provider and keeps it for replay on (re)attach. */
   public register(id: RID<T>, ...args: RArgs<T>) {
-    const callerArgs = bindCallerArguments(args);
-    const callback = this.handlers.register;
-    if (!callback && internal.testStubMode) {
+    const attachment = this.handlers.register;
+    if (!attachment && internal.testStubMode) {
       throw new MissingProviderError();
     }
-    this.registered.set(id, { ...getExecutionOwnership(), args: callerArgs });
-    callback?.callback(id, ...callerArgs);
+    this.registered.set(id, { ...getExecutionOwnership(), args });
+    if (attachment) {
+      runAttachment(attachment, (callback) => callback(id, ...args));
+    }
   }
 
   /** Unregisters an entry from the provider. */
@@ -357,8 +387,11 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
     if (!this.registered.has(id)) {
       return;
     }
+    const attachment = this.handlers.unregister;
     try {
-      this.handlers.unregister?.callback(id);
+      if (attachment) {
+        runAttachment(attachment, (callback) => callback(id));
+      }
     } finally {
       this.registered.delete(id);
     }
@@ -403,13 +436,14 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
     options: AttachmentOptions,
   ): AttachmentLease {
     const lease = createLease(options.owner);
-    this.handlers.register = this.createAttachment(
+    const attachment = this.createAttachment(
       callback,
       lease,
       options.manualDetach,
     );
+    this.handlers.register = attachment;
     this.trackAttachment(lease, options.manualDetach);
-    this.replayRegistrations(callback);
+    this.replayRegistrations(attachment);
     return lease;
   }
 
@@ -441,13 +475,18 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
     lease: AttachmentLease,
     manualDetach?: boolean,
   ): RegisterAttachment<F> {
-    return { callback, ...lease, manualDetach: Boolean(manualDetach) };
+    return {
+      callback,
+      context: captureProviderContext(),
+      ...lease,
+      manualDetach: Boolean(manualDetach),
+    };
   }
 
-  private replayRegistrations(callback: T) {
+  private replayRegistrations(attachment: RegisterAttachment<T>) {
     for (const [id, entry] of this.registered) {
       try {
-        callback(id, ...entry.args);
+        runAttachment(attachment, (callback) => callback(id, ...entry.args));
       } catch (error) {
         internal.replayErrorReporter?.(id, error);
         reportRuntimeError(
@@ -464,7 +503,7 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
 
 type EventFunction = (...args: any[]) => void;
 
-/** Module-aware event handler collection; each handler runs in its registrant's context. */
+/** Module-aware event handler collection; each handler runs in the context it was registered in. */
 export class EventProxy<T extends EventFunction = EventFunction> {
   public readonly [PROXY_BRAND]: ProxyBrand;
   private registered: EventEntry<T>[] = [];
@@ -476,9 +515,9 @@ export class EventProxy<T extends EventFunction = EventFunction> {
 
   /** Emits to every handler, reporting failures without aborting later handlers. */
   public emit(...args: Parameters<T>) {
-    for (const { handler, module } of this.registered) {
+    for (const { func, context, module } of this.registered) {
       try {
-        handler(...args);
+        enterModuleContext(context, () => func(...args));
       } catch (error) {
         reportRuntimeError(
           error,
@@ -498,7 +537,7 @@ export class EventProxy<T extends EventFunction = EventFunction> {
     this.registered.push({
       ...getExecutionOwnership(),
       func,
-      handler: bindCallerFunction(func),
+      context: captureModuleContext(),
     });
   }
 
@@ -520,30 +559,7 @@ export class EventProxy<T extends EventFunction = EventFunction> {
   }
 }
 
-function captureCallStack(startFrame = 0): NodeJS.CallSite[] {
-  const oldHandler = Error.prepareStackTrace;
-  const oldLimit = Error.stackTraceLimit;
-  Error.stackTraceLimit = Infinity;
-  Error.prepareStackTrace = (_, trace) => trace;
-  const error = {} as { stack: string[] };
-  Error.captureStackTrace(error, GetResponsibleModule);
-  const trace = error.stack as unknown as NodeJS.CallSite[];
-  Error.prepareStackTrace = oldHandler;
-  Error.stackTraceLimit = oldLimit;
-  return trace.slice(startFrame);
-}
-
-/** Gets the responsible module from explicit async context or the call stack. */
-export function GetResponsibleModule(startFrame = 0): string | undefined {
-  const contextModule = getModuleContext()?.module;
-  if (contextModule) {
-    return contextModule;
-  }
-  const trace = captureCallStack(startFrame);
-  const responsible = findResponsibleFile(trace);
-  if (responsible.module) {
-    return responsible.module;
-  }
-  internal.asyncContextReporter?.(trace);
-  return responsible.lastInterface;
+/** Gets the module whose work is running, from the async module context. */
+export function GetResponsibleModule(): string | undefined {
+  return getModuleContext()?.module;
 }

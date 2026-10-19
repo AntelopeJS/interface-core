@@ -58,7 +58,7 @@ describe("explicit module ownership", () => {
     }
   });
 
-  it("retains stack resolution outside an explicit context", () => {
+  it("reports no module outside a context, without capturing a stack", () => {
     const captureStackTrace = Error.captureStackTrace;
     let captures = 0;
     Error.captureStackTrace = (...args) => {
@@ -67,8 +67,8 @@ describe("explicit module ownership", () => {
     };
 
     try {
-      GetResponsibleModule();
-      expect(captures).to.equal(1);
+      expect(GetResponsibleModule()).to.equal(undefined);
+      expect(captures).to.equal(0);
     } finally {
       Error.captureStackTrace = captureStackTrace;
     }

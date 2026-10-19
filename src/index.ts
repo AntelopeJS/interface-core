@@ -1,6 +1,5 @@
 import "reflect-metadata";
 
-import { Logging } from "./logging";
 import type { Class } from "./decorators";
 import { type InterfaceConnection, internal } from "./internal";
 import {
@@ -23,21 +22,6 @@ export {
   RegisteringProxy,
   RunWithResponsibleModule,
 } from "./proxies";
-
-internal.asyncContextReporter = (trace: NodeJS.CallSite[]) => {
-  const lastSite = trace[trace.length - 1];
-  if (lastSite?.getFileName() !== "node:internal/timers") {
-    return;
-  }
-  const tracestr = trace
-    .filter((site) => !site.getFileName()?.startsWith("node:internal/"))
-    .map((site) => site.toString())
-    .join("\n    - ");
-  Logging.Error(
-    "GetResponsibleModule called from within an async context, this will break hot reloading!\n    - " +
-      tracestr,
-  );
-};
 
 /**
  * Gets metadata for a target object using the specified metadata class.

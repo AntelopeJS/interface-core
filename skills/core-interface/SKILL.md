@@ -114,10 +114,9 @@ ch.Debug("query", { ms: 12 });
   implementation in test environment. Ensure the required module is loaded in your test config.".
 - Prefer the synchronous `ImplementInterface(decl, impl)`; the Promise-accepting overload is
   deprecated. Implementations may be partial - unmatched keys keep queuing.
-- Module attribution (`GetResponsibleModule`) works by call-stack analysis. Attach implementations
-  and register handlers synchronously during module load; doing it from a setTimeout/setInterval
-  callback logs "this will break hot reloading!", and other async contexts break attribution
-  silently - both defeat automatic cleanup on module unload.
+- Module attribution (`GetResponsibleModule`) reads the async module context the core enters for
+  each module. Provider callbacks run in the provider's context and event handlers in their
+  registrant's; a function passed as an argument runs in whichever context invokes it.
 - `RegisteringProxy` replays existing registrations to a newly attached provider (hot reload safe);
   `EventProxy.register` deduplicates by function identity; both auto-clean handlers of destroyed
   modules via `Events.ModuleDestroyed`.
