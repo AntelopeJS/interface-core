@@ -1,3 +1,5 @@
+import { runInNewContext } from "node:vm";
+
 import { expect } from "chai";
 
 import {
@@ -10,6 +12,8 @@ import {
   AsyncProxy,
   EventProxy,
   GetResponsibleModule,
+  isModuleContextInvalidatedError,
+  MODULE_CONTEXT_INVALIDATED_CODE,
   ModuleContextInvalidatedError,
   RegisteringProxy,
 } from "..";
@@ -387,5 +391,54 @@ describe("call chain: fence on a destroyed generation", () => {
     expect(await outcomeOf(outcome)).to.be.instanceOf(
       ModuleContextInvalidatedError,
     );
+  });
+});
+
+describe("isModuleContextInvalidatedError", () => {
+  it("accepts the error a destroyed generation's call rejects with", async () => {
+    const proxy = new AsyncProxy<() => string>();
+    inModule("b", "b#21", () => proxy.onCall(() => "served"));
+    const gate = deferred();
+    const outcome = inModule("a", "a#21", async () => {
+      await gate.promise;
+      return outcomeOf(proxy.call());
+    });
+
+    destroy("a", "a#21");
+    gate.resolve();
+
+    expect(isModuleContextInvalidatedError(await outcome)).to.equal(true);
+  });
+
+  it("accepts an error carrying the code from a duplicated package copy", () => {
+    const foreignCopy = Object.assign(new Error("other wording"), {
+      code: MODULE_CONTEXT_INVALIDATED_CODE,
+    });
+    expect(foreignCopy).not.to.be.instanceOf(ModuleContextInvalidatedError);
+    expect(isModuleContextInvalidatedError(foreignCopy)).to.equal(true);
+  });
+
+  it("accepts an error carrying the code from another realm", () => {
+    const foreignRealmError = runInNewContext(
+      "Object.assign(new Error('other realm'), { code })",
+      { code: MODULE_CONTEXT_INVALIDATED_CODE },
+    ) as Error;
+
+    expect(foreignRealmError instanceof Error).to.equal(false);
+    expect(isModuleContextInvalidatedError(foreignRealmError)).to.equal(true);
+  });
+
+  it("rejects other errors, plain objects and non-errors", () => {
+    expect(
+      isModuleContextInvalidatedError(
+        Object.assign(new Error("x"), { code: "ERR_NO_PROVIDER" }),
+      ),
+    ).to.equal(false);
+    expect(
+      isModuleContextInvalidatedError({
+        code: MODULE_CONTEXT_INVALIDATED_CODE,
+      }),
+    ).to.equal(false);
+    expect(isModuleContextInvalidatedError(undefined)).to.equal(false);
   });
 });

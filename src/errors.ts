@@ -89,3 +89,22 @@ export function isMissingProviderError(
     (error as MissingProviderError).code === MISSING_PROVIDER_CODE
   );
 }
+
+/**
+ * Type guard for {@link ModuleContextInvalidatedError}: the work belonged to a
+ * module generation that was destroyed (a module stopping, or a hot reload
+ * replacing it).
+ *
+ * Checks the stable `code` property instead of `instanceof`, so detection
+ * survives realm boundaries and duplicated copies of this package: the module
+ * that threw the error may hold its own copy.
+ */
+export function isModuleContextInvalidatedError(
+  error: unknown,
+): error is ModuleContextInvalidatedError {
+  return (
+    isError(error) &&
+    (error as ModuleContextInvalidatedError).code ===
+      MODULE_CONTEXT_INVALIDATED_CODE
+  );
+}
