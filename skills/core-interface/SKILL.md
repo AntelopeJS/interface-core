@@ -1,6 +1,6 @@
 ---
 name: core-interface
-description: Provides the AntelopeJS core interface primitives - AsyncProxy/EventProxy/RegisteringProxy, InterfaceFunction, ImplementInterface, GetMetadata, decorator factories, module lifecycle events, structured Logging, and defineConfig. Use when importing from "@antelopejs/interface-core" (or its /decorators, /modules, /proxies, /runtime, /config, /logging subpaths), when declaring or implementing an AntelopeJS interface, wiring cross-module calls or events, building custom decorators, subscribing to ModuleStarted/ModuleDestroyed, writing logs via Logging.Info/Error, or authoring antelope.config with defineConfig.
+description: Provides the AntelopeJS core interface primitives - AsyncProxy/EventProxy/RegisteringProxy, InterfaceFunction, ImplementInterface, GetMetadata, decorator factories, module lifecycle events, structured Logging, and defineConfig. Use when importing from "@antelopejs/interface-core" (or its /decorators, /modules, /proxies, /runtime, /config, /logging subpaths), when declaring or implementing an AntelopeJS interface, wiring cross-module calls or events, building custom decorators, subscribing to ModuleStarted/ModuleDestroyed or ModulesStarted/ModulesStopping, writing logs via Logging.Info/Error, or authoring antelope.config with defineConfig.
 category: antelopejs-interface
 tags: [antelopejs, interface, proxy, decorators, logging]
 ---
