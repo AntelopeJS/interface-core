@@ -79,6 +79,27 @@ export namespace Events {
   export const ModuleDestroyed = new EventProxy<(module: string) => void>(
     "modules.ModuleDestroyed",
   );
+
+  /**
+   * Event triggers once every module the core was asked to start has started.
+   *
+   * Fires after the last `start()` of a project start (or reload) completed
+   * successfully: the project as a whole is ready to serve. It does not fire
+   * when a module fails to start.
+   */
+  export const ModulesStarted = new EventProxy<() => void>(
+    "modules.ModulesStarted",
+  );
+
+  /**
+   * Event triggers before the first module stops.
+   *
+   * Fires once per stop following a {@link ModulesStarted}: stopping every
+   * module of a project, or reloading one, is a single "stopping".
+   */
+  export const ModulesStopping = new EventProxy<() => void>(
+    "modules.ModulesStopping",
+  );
 }
 
 function runCleanup(
