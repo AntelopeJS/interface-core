@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.2.6
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.2.5...v0.2.6)
+
+### 🚀 Enhancements
+
+- **modules:** Announce when every module started and before they stop ([#44](https://github.com/AntelopeJS/interface-core/pull/44))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.2.5
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.2.4...v0.2.5)
