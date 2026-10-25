@@ -1,0 +1,20 @@
+{
+  "rules": {
+    "antelopejs/no-comments": 22,
+    "antelopejs/no-fs-read-in-tests": 1,
+    "antelopejs/require-assertion": 3,
+    "anti-slop/no-known-value-widening": 4,
+    "anti-slop/no-runtime-typeof": 9,
+    "anti-slop/no-unknown-parameters": 20,
+    "anti-slop/no-unknown-returns": 5,
+    "anti-slop/no-unsafe-dictionary-type": 14,
+    "anti-slop/require-safety-comment-for-type-assertion": 28,
+    "eslint/max-depth": 1,
+    "eslint/max-lines-per-function": 2,
+    "typescript/await-thenable": 1,
+    "typescript/no-misused-spread": 1,
+    "typescript/no-redundant-type-constituents": 14,
+    "typescript/unbound-method": 2
+  },
+  "oversizeFiles": {}
+}

@@ -135,7 +135,6 @@ modules.RunWithModuleContext(providerContext, () => {
 }
 
 try {
-  run("corepack", ["pnpm", "run", "build"], repository);
   run(
     "corepack",
     ["pnpm", "pack", "--pack-destination", temporary],
