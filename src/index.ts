@@ -4,6 +4,7 @@ import type { Class } from "./decorators";
 import { type InterfaceConnection, internal } from "./internal";
 import {
   type AsyncProxy,
+  type AttachmentLease,
   type EventProxy,
   GetResponsibleModule,
   IsInterfaceProxy,
@@ -83,15 +84,31 @@ type InterfaceToImpl<T> = T extends infer P
   : never;
 
 interface AsyncProxyProtocol {
-  onCall(callback: Func): unknown;
+  onCall(callback: Func): AttachmentLease;
+  detach(lease?: AttachmentLease): void;
 }
 
 interface RegisteringProxyProtocol {
-  onHandlers(register: Func, unregister: Func): unknown;
+  onHandlers(register: Func, unregister: Func): AttachmentLease;
+  detach(lease?: AttachmentLease): void;
 }
 
 interface AttachmentPlan {
   attach(): void;
+  rollback(): void;
+}
+
+function leasedPlan(
+  proxy: { detach(lease?: AttachmentLease): void },
+  attach: () => AttachmentLease,
+): AttachmentPlan {
+  let lease: AttachmentLease | undefined;
+  return {
+    attach: () => {
+      lease = attach();
+    },
+    rollback: () => proxy.detach(lease),
+  };
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -137,9 +154,9 @@ function planProxyAttachment(
   }
   if (IsInterfaceProxy(proxy, "async")) {
     const callback = requireFunction(implementation, path);
-    return {
-      attach: () => (proxy as AsyncProxyProtocol).onCall(callback),
-    };
+    // SAFETY: IsInterfaceProxy(proxy, "async") above checked the AsyncProxy brand.
+    const asyncProxy = proxy as AsyncProxyProtocol;
+    return leasedPlan(asyncProxy, () => asyncProxy.onCall(callback));
   }
   if (!IsInterfaceProxy(proxy, "registering")) {
     return;
@@ -152,10 +169,11 @@ function planProxyAttachment(
     implementation.unregister,
     `${path}.unregister`,
   );
-  return {
-    attach: () =>
-      (proxy as RegisteringProxyProtocol).onHandlers(register, unregister),
-  };
+  // SAFETY: IsInterfaceProxy(proxy, "registering") above checked the RegisteringProxy brand.
+  const registeringProxy = proxy as RegisteringProxyProtocol;
+  return leasedPlan(registeringProxy, () =>
+    registeringProxy.onHandlers(register, unregister),
+  );
 }
 
 function createAttachmentPlan(
@@ -201,9 +219,18 @@ function attachImplementation(
   assertAcyclic(declaration, "declaration");
   assertAcyclic(implementation, "implementation");
   const plans = createAttachmentPlan(declaration, implementation);
-  plans.forEach((plan) => {
-    plan.attach();
-  });
+  const attempted: AttachmentPlan[] = [];
+  try {
+    for (const plan of plans) {
+      attempted.push(plan);
+      plan.attach();
+    }
+  } catch (error) {
+    for (const plan of attempted.reverse()) {
+      plan.rollback();
+    }
+    throw error;
+  }
 }
 
 function isThenable(value: unknown): value is PromiseLike<unknown> {
@@ -221,6 +248,8 @@ function isThenable(value: unknown): value is PromiseLike<unknown> {
  * for cross-module communication. EventProxy declarations need no implementation.
  * Validates all required handlers before attaching: async proxies need a function,
  * and registering proxies need both register and unregister callbacks.
+ * When attaching a handler throws, the handlers this call attached are detached
+ * before the error propagates, so the interface is implemented fully or not at all.
  *
  * @param declaration The interface declaration to implement
  * @param implementation The implementation of the interface
