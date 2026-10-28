@@ -15,14 +15,14 @@ const memberArbitrary = fc
     groups: fc.array(fc.integer({ min: 0, max: 2 }), { maxLength: 3 }),
     kind: fc.constantFrom("sync", "async", "registering"),
     present: fc.boolean(),
-    fault: fc.constantFrom(
-      "valid",
-      "missing",
-      "number",
-      "null",
-      "getter",
-      "unregister",
-      "replay",
+    fault: fc.oneof(
+      { arbitrary: fc.constant("valid" as const), weight: 6 },
+      { arbitrary: fc.constant("replay" as const), weight: 2 },
+      { arbitrary: fc.constant("missing" as const), weight: 1 },
+      { arbitrary: fc.constant("number" as const), weight: 1 },
+      { arbitrary: fc.constant("null" as const), weight: 1 },
+      { arbitrary: fc.constant("getter" as const), weight: 1 },
+      { arbitrary: fc.constant("unregister" as const), weight: 1 },
     ),
   })
   .map((member) => ({

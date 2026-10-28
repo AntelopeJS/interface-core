@@ -34,20 +34,20 @@ The test calls the public `ImplementInterface` with explicit empty-object generi
 
 ## Bounds and exclusions
 
-The generator chooses zero to eight member slots. Each present member has zero to three nested groups, with three group names at each level. Names `fN` cannot collide with group names. Leaves use sync handlers, async handlers, or `RegisteringProxy` handler pairs. Faults include a missing member, a number, null, an enumerable getter that throws, a malformed unregister handler, and a throw during registration replay.
+The generator chooses zero to eight member slots. Each present member has zero to three nested groups, with three group names at each level. Names `fN` cannot collide with group names. Leaves use sync handlers, async handlers, or `RegisteringProxy` handler pairs. Faults include a missing member, a number, null, an enumerable getter that throws, a malformed unregister handler, and a throw during registration replay. `valid` has weight 6 and `replay` weight 2 against 1 for each other fault, so trees where a replay throws after other handlers attached come up often. With equal weights, 500 runs missed a dropped outer rollback.
 
 The sync and async handlers both use `InterfaceFunction`, whose consumer contract always returns a promise. Successful recovery uses a distinct provider marker. The oracle checks the candidate before the retry and checks every recovered handler afterward.
 
-This is randomized testing of real TypeScript code, not an exhaustive proof. It does not cover arbitrary cycles, shared declaration nodes, event subscriptions, pre-existing providers, deprecated thenable inputs, concurrent attachment, module destruction interleavings, or rollback of external side effects already performed by a provider callback. The error reporter is part of the generated environment. A returning reporter absorbs replay errors and allows the remaining attachments to proceed.
+This is randomized testing of real TypeScript code, not an exhaustive proof. It does not cover arbitrary cycles, shared declaration nodes, event subscriptions, pre-existing providers (one case, a released owner failing to replace a healthy provider, is a fixed regression test in `implement-interface-validation.test.ts`), deprecated thenable inputs, concurrent attachment, module destruction interleavings, or rollback of external side effects already performed by a provider callback. The error reporter is part of the generated environment. A returning reporter absorbs replay errors and allows the remaining attachments to proceed.
 
 ## Coverage record
 
-Last code synchronization is `1ed2cb316c0ea69a313551b9c843d3f357a07f8f`, the commit that makes `attachImplementation` roll back.
+Last code synchronization is the commit that makes rollback lease-specific, the head of the pull request that adds this skill.
 
 | File | Covered functions and role |
 | --- | --- |
 | `src/index.ts` | `ImplementInterface`, `attachImplementation` and its rollback, `leasedPlan`, `assertAcyclic`, `createAttachmentPlan`, `planProxyAttachment`, `requireFunction`, and object recognition during tree validation and attachment. |
-| `src/proxies.ts` | `InterfaceFunction`, `AsyncProxy.onCall`, `AsyncProxy.call`, `AsyncProxy.invoke`, `RegisteringProxy.onHandlers`, `RegisteringProxy.register`, `RegisteringProxy.unregister`, `RegisteringProxy.replayRegistrations`, `reportRuntimeError`, and attachment ownership capture. |
+| `src/proxies.ts` | `InterfaceFunction`, `AsyncProxy.onCall`, `AsyncProxy.call`, `AsyncProxy.invoke`, `RegisteringProxy.onHandlers`, `RegisteringProxy.replayOrDetach`, `RegisteringProxy.register`, `RegisteringProxy.unregister`, `RegisteringProxy.replayRegistrations`, `reportRuntimeError`, and attachment ownership capture. |
 | `src/internal.ts` | `runWithModuleContext`, `captureModuleContext`, and runtime flags and reporter hooks used during attachment. |
 | `src/modules.ts` | `RunWithModuleContext` supplies provider ownership. `ReleaseOwner` cleans up the fixture, but lifecycle correctness is not verified. |
 | `src/tests/implement-interface-atomicity.test.ts` | Generated trees, candidate and recovery implementations, consumer probes, seed, and both property scenarios. |
@@ -66,48 +66,14 @@ At `1fa59c6`, validation passed 500 runs and attachment replay failed with seed 
 
 The declaration contains `f0`, a real `RegisteringProxy`. A consumer registers `queued` before attachment. `ImplementInterface` installs both handlers, replays `queued`, and the handler throws. The runtime error reporter rethrows, so `ImplementInterface` throws, yet a later consumer still reached `candidate:f0:register,candidate:f0:unregister` instead of `MissingProviderError`. With an interface function before the throwing proxy and another after it, the first answered and the second did not: a partial provider.
 
-Commit `1ed2cb316c0ea69a313551b9c843d3f357a07f8f` fixes it in `attachImplementation`: each plan keeps the lease its attach returns, and a throw detaches every plan the call attempted, in reverse, before the error propagates. Both scenarios now pass 500 runs each.
+The fix has two parts. `RegisteringProxy.onHandlers` and `onRegister` detach their own lease when replay throws. `attachImplementation` keeps one detach function per handler that returned a lease, and calls them in reverse when a later handler throws. A handler that threw before it returned a lease is never detached by `attachImplementation`, so a failed call cannot clear a provider that another call attached. A first version detached with no lease in that case. It cleared a healthy provider when a released owner's call failed while capturing its context, which a cross-model review found and the regression test now covers.
 
 ## Mutation evidence
 
-Each scratch change below was applied to the fixed code, caught, and removed; the check then reported `2 passing` again.
+Each scratch change below was applied to the fixed code, caught, and removed. The check then reported `2 passing` again. On `main`, the check reports `1 passing`, `1 failing` with the counterexample above.
 
-Dropping the rollback brings the finding back:
-
-```diff
-   } catch (error) {
--    for (const plan of attempted.reverse()) {
--      plan.rollback();
--    }
-     throw error;
-   }
-```
-
-```text
-1 passing
-1 failing
-Counterexample: [[{"groups":[],"kind":"registering","present":true,"fault":"replay"}],true]
-```
-
-Attaching during planning, before validation of later members finishes, is caught by both scenarios:
-
-```diff
- const proxyPlan = planProxyAttachment(proxy, implemented, `${path}.${key}`);
- if (proxyPlan) {
-+  proxyPlan.attach();
-   plans.push(proxyPlan);
-   continue;
- }
-```
-
-The same check command then reported:
-
-```text
-0 passing
-2 failing
-Counterexample: [[{"groups":[],"kind":"sync","present":true,"fault":"valid"},{"groups":[],"kind":"registering","present":true,"fault":"unregister"}],false]
-actual:   ['candidate:f0:input', MissingProviderError]
-expected: [MissingProviderError, MissingProviderError]
-```
-
-The mutation attaches `f0` while planning, before `f1.unregister` is rejected, so the rollback never sees it.
+| Scratch change | Result |
+| --- | --- |
+| Remove the reverse detach loop in `attachImplementation` | 1 failing, `[[{"groups":[],"kind":"sync","present":true,"fault":"valid"},{"groups":[],"kind":"registering","present":true,"fault":"replay"}],true]` |
+| Remove `this.detach(lease)` from `replayOrDetach` | 1 failing, `[[{"groups":[],"kind":"registering","present":true,"fault":"replay"}],true]` |
+| Call `proxyPlan.attach()` while planning, in `createAttachmentPlan` | 2 failing, validation shrinks to `[[{"groups":[],"kind":"sync","present":true,"fault":"valid"},{"groups":[],"kind":"sync","present":true,"fault":"null"}],false]` |

@@ -333,8 +333,10 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
 
   /**
    * Installs both callbacks under one lease before replaying registrations.
-   * Replay reports synchronous failures and continues; provider side effects
-   * are not rolled back. Pass the returned lease to detach both callbacks safely.
+   * Replay reports synchronous failures and continues. When the runtime error
+   * reporter rethrows, this lease's callbacks are detached before the error
+   * propagates; provider side effects are not rolled back. Pass the returned
+   * lease to detach both callbacks safely.
    */
   public onHandlers(
     register: T,
@@ -352,7 +354,7 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
       unregister: this.createAttachment(unregister, lease, manualDetach),
     };
     this.trackAttachment(lease, Boolean(manualDetach));
-    this.replayRegistrations(registerAttachment);
+    this.replayOrDetach(registerAttachment, lease);
     return lease;
   }
 
@@ -443,7 +445,7 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
     );
     this.handlers.register = attachment;
     this.trackAttachment(lease, options.manualDetach);
-    this.replayRegistrations(attachment);
+    this.replayOrDetach(attachment, lease);
     return lease;
   }
 
@@ -481,6 +483,18 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
       ...lease,
       manualDetach: Boolean(manualDetach),
     };
+  }
+
+  private replayOrDetach(
+    attachment: RegisterAttachment<T>,
+    lease: AttachmentLease,
+  ) {
+    try {
+      this.replayRegistrations(attachment);
+    } catch (error) {
+      this.detach(lease);
+      throw error;
+    }
   }
 
   private replayRegistrations(attachment: RegisterAttachment<T>) {

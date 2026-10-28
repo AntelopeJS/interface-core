@@ -85,29 +85,27 @@ type InterfaceToImpl<T> = T extends infer P
 
 interface AsyncProxyProtocol {
   onCall(callback: Func): AttachmentLease;
-  detach(lease?: AttachmentLease): void;
+  detach(lease: AttachmentLease): void;
 }
 
 interface RegisteringProxyProtocol {
   onHandlers(register: Func, unregister: Func): AttachmentLease;
-  detach(lease?: AttachmentLease): void;
+  detach(lease: AttachmentLease): void;
 }
 
 interface AttachmentPlan {
-  attach(): void;
-  rollback(): void;
+  attach(): () => void;
 }
 
 function leasedPlan(
-  proxy: { detach(lease?: AttachmentLease): void },
+  proxy: { detach(lease: AttachmentLease): void },
   attach: () => AttachmentLease,
 ): AttachmentPlan {
-  let lease: AttachmentLease | undefined;
   return {
     attach: () => {
-      lease = attach();
+      const lease = attach();
+      return () => proxy.detach(lease);
     },
-    rollback: () => proxy.detach(lease),
   };
 }
 
@@ -219,15 +217,14 @@ function attachImplementation(
   assertAcyclic(declaration, "declaration");
   assertAcyclic(implementation, "implementation");
   const plans = createAttachmentPlan(declaration, implementation);
-  const attempted: AttachmentPlan[] = [];
+  const detachers: Array<() => void> = [];
   try {
     for (const plan of plans) {
-      attempted.push(plan);
-      plan.attach();
+      detachers.push(plan.attach());
     }
   } catch (error) {
-    for (const plan of attempted.reverse()) {
-      plan.rollback();
+    for (const detach of detachers.reverse()) {
+      detach();
     }
     throw error;
   }
@@ -248,8 +245,9 @@ function isThenable(value: unknown): value is PromiseLike<unknown> {
  * for cross-module communication. EventProxy declarations need no implementation.
  * Validates all required handlers before attaching: async proxies need a function,
  * and registering proxies need both register and unregister callbacks.
- * When attaching a handler throws, the handlers this call attached are detached
- * before the error propagates, so the interface is implemented fully or not at all.
+ * When attaching a handler throws, every handler this call attached is detached
+ * by its own lease before the error propagates. A provider attached by another
+ * call stays attached.
  *
  * @param declaration The interface declaration to implement
  * @param implementation The implementation of the interface
