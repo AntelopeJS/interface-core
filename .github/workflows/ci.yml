@@ -4,13 +4,17 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   ci:
-    uses: AntelopeJS/.github/.github/workflows/ci-node.yml@v1
+    permissions:
+      contents: write
+      actions: write
+    uses: AntelopeJS/.github/.github/workflows/ci-node.yml@ci/gardener-ci-pieces
     with:
       docs-files: |
         README.md
