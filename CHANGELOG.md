@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.2.7
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.2.6...v0.2.7)
+
+### 🩹 Fixes
+
+- **implement-interface:** Attach every handler or none, checked by a fast-check property ([#47](https://github.com/AntelopeJS/interface-core/pull/47))
+
+### 🏡 Chore
+
+- Adopt the guardrail pack from tooling-configs 0.2.0 ([#45](https://github.com/AntelopeJS/interface-core/pull/45))
+- Configure Renovate with the shared preset ([#46](https://github.com/AntelopeJS/interface-core/pull/46))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.2.6
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.2.5...v0.2.6)
