@@ -46,10 +46,10 @@ function deferred() {
   return { promise, resolve };
 }
 
-function outcomeOf(promise: Promise<unknown>): Promise<unknown> {
+function outcomeOf(promise: Promise<unknown>) {
   return promise.then(
     () => "resolved",
-    (error: unknown) => error,
+    (error: PromiseRejectedResult["reason"]) => error,
   );
 }
 
@@ -343,9 +343,9 @@ describe("call chain: values cross unchanged", () => {
   });
 
   it("unregisters an event handler by the reference it was registered with", () => {
-    const event = new EventProxy<(value: unknown) => void>();
-    const received: unknown[] = [];
-    const listener = (value: unknown) => received.push(value);
+    const event = new EventProxy<(value: typeof object) => void>();
+    const received: Array<typeof object> = [];
+    const listener = (value: typeof object) => received.push(value);
     inModule("a", "a#13", () => event.register(listener));
 
     event.emit(object);

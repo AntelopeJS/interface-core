@@ -95,7 +95,6 @@ export namespace Logging {
     /**
      * Write arguments to the log channel at the given severity level.
      *
-     * This is the core logging function that all other logging functions ultimately call.
      * It emits an event with the log entry that can be captured by registered listeners.
      *
      * @param levelId - Severity level of the log entry (use values from the Level enum)

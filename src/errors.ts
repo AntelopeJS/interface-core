@@ -68,7 +68,7 @@ export class ModuleContextInvalidatedError extends Error {
  * check holds across realms while still rejecting plain objects; `instanceof`
  * covers the reverse case of an object created from `Error.prototype`.
  */
-function isError(value: unknown): value is Error {
+function isError(value: unknown): value is NodeJS.ErrnoException {
   return (
     Object.prototype.toString.call(value) === "[object Error]" ||
     value instanceof Error
@@ -84,8 +84,5 @@ function isError(value: unknown): value is Error {
 export function isMissingProviderError(
   error: unknown,
 ): error is MissingProviderError {
-  return (
-    isError(error) &&
-    (error as MissingProviderError).code === MISSING_PROVIDER_CODE
-  );
+  return isError(error) && error.code === MISSING_PROVIDER_CODE;
 }

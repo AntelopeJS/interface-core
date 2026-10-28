@@ -28,7 +28,7 @@ export type ModuleContextKind = "module" | "interface";
 
 /** Module identity and provider routes propagated through asynchronous work. */
 export interface ModuleExecutionContext {
-  /** Stable module ID used by existing lifecycle and attribution APIs. */
+  /** Stable module ID. */
   module: string;
   /**
    * `"interface"` for an interface package's own context. An attachment made
@@ -118,10 +118,7 @@ function createRuntime(): InterfaceRuntime {
     knownRegisters: new Map(),
     registeringProxies: new Set(),
     knownEvents: new Set(),
-    interfaceConnections: Object.create(null) as Record<
-      string,
-      Record<string, InterfaceConnection[]>
-    >,
+    interfaceConnections: Object.create(null),
     executionContext: new AsyncLocalStorage<ActiveModuleExecutionContext>(),
     activeOwnerTokens: new Map(),
     nextProxyIdentity: 1,
@@ -137,9 +134,13 @@ function createRuntime(): InterfaceRuntime {
   return runtime;
 }
 
+type GlobalWithRuntime = typeof globalThis & {
+  [RUNTIME_SYMBOL]?: InterfaceRuntime;
+};
+
 function getRuntime(): InterfaceRuntime {
-  const globals = globalThis as Record<PropertyKey, unknown>;
-  const existing = globals[RUNTIME_SYMBOL] as InterfaceRuntime | undefined;
+  const globals: GlobalWithRuntime = globalThis;
+  const existing = globals[RUNTIME_SYMBOL];
   if (existing && existing.protocol !== RUNTIME_PROTOCOL_VERSION) {
     throw new Error(
       `Incompatible @antelopejs/interface-core runtime protocol: expected ${RUNTIME_PROTOCOL_VERSION}, received ${existing.protocol}`,

@@ -127,15 +127,8 @@ function getDestroyedOwner(module: string): string {
 }
 
 /**
- * Takes a destroyed module's registrations back down.
- *
- * Runs while the owner's context is still valid: un-registering is the
- * module's own last piece of work, and the disposers doing it legitimately
- * call interface functions bound to that context — a route registered through
- * `api` is released by calling `api`'s unregister function, through a facade
- * captured when the module registered it. Invalidating first turned every such
- * call into a `ModuleContextInvalidatedError` and left the registration
- * standing in the providing module for as long as the process lived.
+ * Takes a destroyed module's registrations back down, while the owner's
+ * context is still valid: the disposers call interface functions bound to it.
  */
 function releaseOwnerRegistrations(module: string, owner: string) {
   for (const cleanup of internal.knownAsync.get(owner) ?? []) {
@@ -172,7 +165,6 @@ function releaseOwner(module: string, owner: string) {
   try {
     releaseOwnerRegistrations(module, owner);
   } finally {
-    // Only now: nothing else may claim to act for this generation.
     invalidateModuleContext(owner);
   }
 }
@@ -199,7 +191,7 @@ export function ReleaseOwner(owner: string): void {
 export interface ModuleDefinition {
   /**
    * Source location and type information for the module.
-   * The type field indicates the loading mechanism to use (e.g., 'file', 'npm').
+   * The type field indicates the loading mechanism to use.
    * Additional fields depend on the source type.
    */
   source: { type: string } & Record<string, any>;

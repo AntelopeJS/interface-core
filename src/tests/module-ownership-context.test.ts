@@ -12,7 +12,10 @@ import {
   RunWithResponsibleModule,
 } from "..";
 
-function runDetached(module: string, callback: () => void): Promise<unknown> {
+function runDetached(
+  module: string,
+  callback: () => void,
+): Promise<PromiseRejectedResult["reason"]> {
   return new Promise((resolve) => {
     RunWithResponsibleModule(module, () => {
       setImmediate(() => {
@@ -27,7 +30,23 @@ function runDetached(module: string, callback: () => void): Promise<unknown> {
   });
 }
 
-describe("explicit module ownership", () => {
+function countStackCaptures() {
+  const original: typeof Error.captureStackTrace =
+    Object.getOwnPropertyDescriptor(Error, "captureStackTrace")?.value;
+  let captures = 0;
+  Error.captureStackTrace = (...args) => {
+    captures += 1;
+    original(...args);
+  };
+  return {
+    captures: () => captures,
+    restore: () => {
+      Error.captureStackTrace = original;
+    },
+  };
+}
+
+function isolateRuntimeState() {
   let testStubMode: boolean;
 
   beforeEach(() => {
@@ -39,38 +58,32 @@ describe("explicit module ownership", () => {
   afterEach(() => {
     internal.testStubMode = testStubMode;
   });
+}
+
+describe("explicit module ownership", () => {
+  isolateRuntimeState();
 
   it("resolves without capturing a stack", () => {
-    const captureStackTrace = Error.captureStackTrace;
-    let captures = 0;
-    Error.captureStackTrace = (...args) => {
-      captures += 1;
-      captureStackTrace(...args);
-    };
+    const stackCaptures = countStackCaptures();
 
     try {
       expect(
         RunWithResponsibleModule("module-a", () => GetResponsibleModule()),
       ).to.equal("module-a");
-      expect(captures).to.equal(0);
+      expect(stackCaptures.captures()).to.equal(0);
     } finally {
-      Error.captureStackTrace = captureStackTrace;
+      stackCaptures.restore();
     }
   });
 
   it("reports no module outside a context, without capturing a stack", () => {
-    const captureStackTrace = Error.captureStackTrace;
-    let captures = 0;
-    Error.captureStackTrace = (...args) => {
-      captures += 1;
-      captureStackTrace(...args);
-    };
+    const stackCaptures = countStackCaptures();
 
     try {
       expect(GetResponsibleModule()).to.equal(undefined);
-      expect(captures).to.equal(0);
+      expect(stackCaptures.captures()).to.equal(0);
     } finally {
-      Error.captureStackTrace = captureStackTrace;
+      stackCaptures.restore();
     }
   });
 
@@ -127,6 +140,10 @@ describe("explicit module ownership", () => {
     expect(oldError).to.be.instanceOf(ModuleContextInvalidatedError);
     expect(calls).to.deep.equal(["new"]);
   });
+});
+
+describe("explicit module ownership of concurrent and nested work", () => {
+  isolateRuntimeState();
 
   it("invalidates concurrent work from the destroyed generation", async () => {
     const events = new EventProxy<() => void>();
@@ -204,6 +221,10 @@ describe("explicit module ownership", () => {
       ModuleContextInvalidatedError,
     );
   });
+});
+
+describe("explicit module ownership of providers", () => {
+  isolateRuntimeState();
 
   it("restores ownership when nested work throws", () => {
     RunWithResponsibleModule("outer", () => {

@@ -21,12 +21,6 @@ describe("teardown under the destroyed module's own context", () => {
   });
 
   it("lets a register cleanup call an interface function bound to that module", () => {
-    // The shape that broke DMS hot reload: a page registered with one module
-    // is taken down by calling another module's unregister function, through
-    // a facade the core bound to the module that did the registering. That
-    // call is the dying module's own last work — invalidating its context
-    // before running it turned every teardown step into an error and left the
-    // route registered in the provider for the life of the process.
     const pages = new RegisteringProxy<(id: string) => void>(
       "teardown.RegisterPage",
     );
@@ -47,8 +41,6 @@ describe("teardown under the destroyed module's own context", () => {
     RunWithModuleContext(
       { module: "playground", owner: "playground#1" },
       () => {
-        // What the resolver hands a consumer: the provider's function pinned to
-        // the context that imported it.
         const captured = captureModuleContext();
         expect(captured).to.not.equal(undefined);
         unregisterRoute = (id) =>

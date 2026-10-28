@@ -2,7 +2,7 @@ import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 
 const repository = dirname(dirname(fileURLToPath(import.meta.url)));
 const temporary = mkdtempSync(join(tmpdir(), "interface-core-consumer-"));
@@ -135,15 +135,16 @@ modules.RunWithModuleContext(providerContext, () => {
 }
 
 try {
-  run(
-    "corepack",
-    ["pnpm", "pack", "--pack-destination", temporary],
-    repository,
-    { ...process.env, npm_config_ignore_scripts: "true" },
-  );
-  const tarball = join(
-    temporary,
-    readdirSync(temporary).find((entry) => entry.endsWith(".tgz")),
+  const { filename: tarball } = JSON.parse(
+    execFileSync(
+      "corepack",
+      ["pnpm", "pack", "--pack-destination", temporary, "--json"],
+      {
+        cwd: repository,
+        env: { ...process.env, npm_config_ignore_scripts: "true" },
+        stdio: ["ignore", "pipe", "inherit"],
+      },
+    ),
   );
   createConsumer(tarball);
   run(

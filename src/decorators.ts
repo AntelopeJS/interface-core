@@ -160,9 +160,7 @@ export function MakePropertyDecorator<T extends any[]>(
 export function MakePropertyAndClassDecorator<T extends any[]>(
   handler: Function2<[PropertyDecorator, ClassDecorator], T, any | undefined>,
 ) {
-  return Decorator2<[PropertyDecorator, ClassDecorator], T, any | undefined>(
-    handler,
-  );
+  return Decorator2<[PropertyDecorator, ClassDecorator], T, any>(handler);
 }
 
 /**
@@ -190,9 +188,7 @@ export function MakeMethodDecorator<T extends any[]>(
 export function MakeMethodAndClassDecorator<T extends any[]>(
   handler: Function3<[MethodDecorator, ClassDecorator], T, any | undefined>,
 ) {
-  return Decorator3<[MethodDecorator, ClassDecorator], T, any | undefined>(
-    handler,
-  );
+  return Decorator3<[MethodDecorator, ClassDecorator], T, any>(handler);
 }
 
 /**
@@ -227,7 +223,7 @@ export function MakeMethodAndPropertyAndClassDecorator<T extends any[]>(
   return Decorator3<
     [MethodDecorator, PropertyDecorator, ClassDecorator],
     T,
-    any | undefined
+    any
   >(handler);
 }
 
@@ -256,9 +252,7 @@ export function MakeParameterDecorator<T extends any[]>(
 export function MakeParameterAndClassDecorator<T extends any[]>(
   handler: Function3<[ParameterDecorator, ClassDecorator], T, any | undefined>,
 ) {
-  return Decorator3<[ParameterDecorator, ClassDecorator], T, any | undefined>(
-    handler,
-  );
+  return Decorator3<[ParameterDecorator, ClassDecorator], T, any>(handler);
 }
 
 /**
@@ -293,7 +287,7 @@ export function MakeParameterAndPropertyAndClassDecorator<T extends any[]>(
   return Decorator3<
     [ParameterDecorator, PropertyDecorator, ClassDecorator],
     T,
-    any | undefined
+    any
   >(handler);
 }
 
@@ -329,7 +323,7 @@ export function MakeParameterAndMethodAndClassDecorator<T extends any[]>(
   return Decorator3<
     [ParameterDecorator, MethodDecorator, ClassDecorator],
     T,
-    any | undefined
+    any
   >(handler);
 }
 
@@ -375,6 +369,6 @@ export function MakeParameterAndMethodAndPropertyAndClassDecorator<
   return Decorator3<
     [ParameterDecorator, MethodDecorator, PropertyDecorator, ClassDecorator],
     T,
-    any | undefined
+    any
   >(handler);
 }

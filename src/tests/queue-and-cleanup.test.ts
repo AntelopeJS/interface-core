@@ -30,7 +30,7 @@ describe("bounded queues and resilient cleanup", () => {
 
     const error = await proxy.call(3).then(
       () => undefined,
-      (reason: unknown) => reason,
+      (reason: PromiseRejectedResult["reason"]) => reason,
     );
     expect(error).to.be.instanceOf(ProviderQueueFullError);
     proxy.onCall((value) => value * 2, true);

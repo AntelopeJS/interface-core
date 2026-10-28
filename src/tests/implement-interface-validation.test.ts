@@ -12,6 +12,8 @@ import {
   RunWithModuleContext,
 } from "..";
 
+type SelfReferencing = { self?: unknown };
+
 describe("ImplementInterface validation", () => {
   afterEach(() => {
     internal.testStubMode = false;
@@ -22,15 +24,18 @@ describe("ImplementInterface validation", () => {
     const second = new AsyncProxy<() => string>("test.atomic.second");
 
     expect(() =>
-      ImplementInterface({ first, second }, {
-        first: () => "attached",
-      } as never),
+      ImplementInterface(
+        { first, second },
+        {
+          first: () => "attached",
+        },
+      ),
     ).to.throw("implementation.second");
 
     internal.testStubMode = true;
     const error = await first.call().then(
       () => undefined,
-      (reason: unknown) => reason,
+      (reason: PromiseRejectedResult["reason"]) => reason,
     );
     expect(error).to.be.instanceOf(Error);
   });
@@ -67,13 +72,13 @@ describe("ImplementInterface validation", () => {
   });
 
   it("rejects cycles in declarations and implementations", () => {
-    const declaration: Record<string, unknown> = {};
+    const declaration: SelfReferencing = {};
     declaration.self = declaration;
     expect(() => ImplementInterface(declaration, {})).to.throw(
       "declaration contains a cycle",
     );
 
-    const implementation: Record<string, unknown> = {};
+    const implementation: SelfReferencing = {};
     implementation.self = implementation;
     expect(() => ImplementInterface({}, implementation)).to.throw(
       "implementation contains a cycle",
@@ -82,15 +87,14 @@ describe("ImplementInterface validation", () => {
 
   it("awaits thenables and promises created in another realm", async () => {
     const proxy = new AsyncProxy<() => string>("test.cross-realm-promise");
-    const declaration = runInNewContext("Promise.resolve(value)", {
-      value: { proxy },
-    }) as PromiseLike<{ proxy: AsyncProxy<() => string> }>;
-    const implementation = runInNewContext(
-      "({ then(resolve) { resolve(value); } })",
-      { value: { proxy: () => "resolved" } },
-    ) as PromiseLike<{ proxy: () => string }>;
+    const declaration: PromiseLike<{ proxy: AsyncProxy<() => string> }> =
+      runInNewContext("Promise.resolve(value)", { value: { proxy } });
+    const implementation: PromiseLike<{ proxy: () => string }> =
+      runInNewContext("({ then(resolve) { resolve(value); } })", {
+        value: { proxy: () => "resolved" },
+      });
 
-    await ImplementInterface(declaration as never, implementation as never);
+    await ImplementInterface(declaration, implementation);
     expect(await proxy.call()).to.equal("resolved");
   });
 });
