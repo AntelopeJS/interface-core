@@ -99,7 +99,9 @@
     "sync": "antelopejs-sync",
     "ratchet:update": "antelopejs-ratchet --update",
     "sync:check": "antelopejs-sync --check",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "suppressions": "antelopejs-suppressions",
+    "suppressions:update": "antelopejs-suppressions --update"
   },
   "dependencies": {
     "reflect-metadata": "^0.2.2"
