@@ -25,6 +25,12 @@ export {
   RunWithResponsibleModule,
 } from "./proxies";
 
+function hasInherit<T extends object>(
+  data: T,
+): data is T & { inherit(parent: T): void } {
+  return "inherit" in data && typeof data.inherit === "function";
+}
+
 function copyMissingProperties<T extends Record<string, any>>(
   data: T,
   parent: T,
@@ -59,7 +65,7 @@ export function GetMetadata<
     const proto = Object.getPrototypeOf(target);
     if (inherit && proto) {
       const parent = GetMetadata(proto, meta, true);
-      if ("inherit" in data && typeof data.inherit === "function") {
+      if (hasInherit(data)) {
         data.inherit(parent);
       } else {
         copyMissingProperties(data, parent);
@@ -149,6 +155,10 @@ function assertAcyclic(value: Unparsed, label: string) {
   visit(value, label);
 }
 
+function carriesProxy(value: Unparsed): value is Func & { proxy: Unparsed } {
+  return typeof value === "function" && "proxy" in value;
+}
+
 function assertFunction(value: Unparsed, path: string): asserts value is Func {
   if (typeof value !== "function") {
     throw new TypeError(`Missing or malformed interface handler at ${path}.`);
@@ -194,10 +204,7 @@ function createAttachmentPlan(
   const plans: AttachmentPlan[] = [];
   for (const [key, declared] of Object.entries(declaration)) {
     const implemented = implementation[key];
-    const proxy =
-      typeof declared === "function" && "proxy" in declared
-        ? declared.proxy
-        : declared;
+    const proxy = carriesProxy(declared) ? declared.proxy : declared;
     const proxyPlan = planProxyAttachment(proxy, implemented, `${path}.${key}`);
     if (proxyPlan) {
       plans.push(proxyPlan);
@@ -239,12 +246,16 @@ function attachImplementation(declaration: Unparsed, implementation: Unparsed) {
   }
 }
 
+interface MaybeThenable {
+  readonly then?: unknown;
+}
+
 function isThenable(value: Unparsed): value is PromiseLike<unknown> {
-  return (
-    (typeof value === "object" || typeof value === "function") &&
-    value !== null &&
-    typeof (value as PromiseLike<unknown>).then === "function"
-  );
+  if ((typeof value !== "object" && typeof value !== "function") || !value) {
+    return false;
+  }
+  const holder: MaybeThenable = value;
+  return typeof holder.then === "function";
 }
 
 /**

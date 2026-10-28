@@ -64,11 +64,13 @@ describe("ImplementInterface validation", () => {
     const proxy = new RegisteringProxy<(id: string) => void>(
       "test.malformed-registering",
     );
-    expect(() =>
-      ImplementInterface({ proxy }, {
-        proxy: { register: () => undefined },
-      } as never),
-    ).to.throw("implementation.proxy.unregister");
+    const implementation = {
+      proxy: { register: () => undefined, unregister: () => undefined },
+    };
+    Reflect.deleteProperty(implementation.proxy, "unregister");
+    expect(() => ImplementInterface({ proxy }, implementation)).to.throw(
+      "implementation.proxy.unregister",
+    );
   });
 
   it("rejects cycles in declarations and implementations", () => {
