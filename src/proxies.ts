@@ -9,10 +9,12 @@ import {
   enterModuleContext,
   getModuleContext,
   internal,
+  type InterfaceRuntime,
   invalidateModuleContext,
   isModuleContextActive,
   type ProxyBrand,
   runAsCapturedCaller,
+  type RuntimeErrorDetails,
   RUNTIME_PROTOCOL_VERSION,
   runWithModuleContext,
 } from "./internal";
@@ -88,13 +90,18 @@ function createBrand(kind: ProxyKind, identity?: string): ProxyBrand {
   });
 }
 
-function readBrand(value: unknown): ProxyBrand | undefined {
+interface MaybeBranded {
+  readonly [PROXY_BRAND]?: ProxyBrand;
+}
+
+function readBrand(
+  value: Parameters<typeof IsInterfaceProxy>[0],
+): ProxyBrand | undefined {
   if ((typeof value !== "object" && typeof value !== "function") || !value) {
     return;
   }
-  const brand = (value as Record<PropertyKey, unknown>)[PROXY_BRAND] as
-    | ProxyBrand
-    | undefined;
+  const holder: MaybeBranded = value;
+  const brand = holder[PROXY_BRAND];
   if (!brand || brand.protocol !== RUNTIME_PROTOCOL_VERSION) {
     return;
   }
@@ -148,12 +155,16 @@ function getExecutionOwnership(): ExecutionOwnership {
   return { module: context.module, owner: context.owner ?? context.module };
 }
 
+type RuntimeErrorReporter = NonNullable<
+  InterfaceRuntime["runtimeErrorReporter"]
+>;
+
 function reportRuntimeError(
-  error: unknown,
+  error: Parameters<RuntimeErrorReporter>[0],
   operation: string,
   proxyIdentity: string,
   module?: string,
-  registrationId?: unknown,
+  registrationId?: RuntimeErrorDetails["registrationId"],
 ) {
   internal.runtimeErrorReporter?.(error, {
     operation,

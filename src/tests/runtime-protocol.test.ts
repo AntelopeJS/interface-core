@@ -6,17 +6,6 @@ import { cpSync, mkdtempSync, rmSync } from "node:fs";
 import { RunWithModuleContext } from "../modules";
 import { AsyncProxy, RunWithResponsibleModule } from "..";
 
-interface ForeignCore {
-  AsyncProxy: new (identity?: string) => {
-    call(): Promise<string>;
-  };
-  ImplementInterface(
-    declaration: Record<string, unknown>,
-    implementation: Record<string, unknown>,
-  ): unknown;
-  GetResponsibleModule(): string | undefined;
-}
-
 describe("global runtime protocol", () => {
   let copyPath: string | undefined;
 
@@ -31,7 +20,7 @@ describe("global runtime protocol", () => {
     const temporary = mkdtempSync(join(process.cwd(), ".interface-core-copy-"));
     copyPath = join(temporary, "dist");
     cpSync(join(__dirname, ".."), copyPath, { recursive: true });
-    const foreign = require(join(copyPath, "index.js")) as ForeignCore;
+    const foreign: typeof import("..") = require(join(copyPath, "index.js"));
     const localProxy = new AsyncProxy<() => string>("test.cross-copy");
     const foreignProxy = new foreign.AsyncProxy("test.cross-copy");
 

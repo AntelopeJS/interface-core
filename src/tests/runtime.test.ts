@@ -17,10 +17,20 @@ function drainQueuedCalls() {
   return undefined;
 }
 
-function resetProxy(func: unknown) {
-  const proxy = (func as ProxiedFunction).proxy;
-  proxy.onCall(drainQueuedCalls, true);
-  proxy.detach();
+type RuntimeFunction = typeof GetRuntimeInfo | typeof RegisterDevServer;
+
+function hasProxy(
+  func: RuntimeFunction,
+): func is RuntimeFunction & ProxiedFunction {
+  return "proxy" in func;
+}
+
+function resetProxy(func: RuntimeFunction) {
+  if (!hasProxy(func)) {
+    throw new TypeError("Interface function carries no proxy.");
+  }
+  func.proxy.onCall(drainQueuedCalls, true);
+  func.proxy.detach();
 }
 
 describe("runtime interface", () => {

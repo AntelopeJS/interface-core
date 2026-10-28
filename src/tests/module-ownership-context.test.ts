@@ -12,7 +12,10 @@ import {
   RunWithResponsibleModule,
 } from "..";
 
-function runDetached(module: string, callback: () => void): Promise<unknown> {
+function runDetached(
+  module: string,
+  callback: () => void,
+): Promise<PromiseRejectedResult["reason"]> {
   return new Promise((resolve) => {
     RunWithResponsibleModule(module, () => {
       setImmediate(() => {
@@ -25,6 +28,22 @@ function runDetached(module: string, callback: () => void): Promise<unknown> {
       });
     });
   });
+}
+
+function countStackCaptures() {
+  const original: typeof Error.captureStackTrace =
+    Object.getOwnPropertyDescriptor(Error, "captureStackTrace")?.value;
+  let captures = 0;
+  Error.captureStackTrace = (...args) => {
+    captures += 1;
+    original(...args);
+  };
+  return {
+    captures: () => captures,
+    restore: () => {
+      Error.captureStackTrace = original;
+    },
+  };
 }
 
 describe("explicit module ownership", () => {
@@ -41,36 +60,26 @@ describe("explicit module ownership", () => {
   });
 
   it("resolves without capturing a stack", () => {
-    const captureStackTrace = Error.captureStackTrace;
-    let captures = 0;
-    Error.captureStackTrace = (...args) => {
-      captures += 1;
-      captureStackTrace(...args);
-    };
+    const stackCaptures = countStackCaptures();
 
     try {
       expect(
         RunWithResponsibleModule("module-a", () => GetResponsibleModule()),
       ).to.equal("module-a");
-      expect(captures).to.equal(0);
+      expect(stackCaptures.captures()).to.equal(0);
     } finally {
-      Error.captureStackTrace = captureStackTrace;
+      stackCaptures.restore();
     }
   });
 
   it("reports no module outside a context, without capturing a stack", () => {
-    const captureStackTrace = Error.captureStackTrace;
-    let captures = 0;
-    Error.captureStackTrace = (...args) => {
-      captures += 1;
-      captureStackTrace(...args);
-    };
+    const stackCaptures = countStackCaptures();
 
     try {
       expect(GetResponsibleModule()).to.equal(undefined);
-      expect(captures).to.equal(0);
+      expect(stackCaptures.captures()).to.equal(0);
     } finally {
-      Error.captureStackTrace = captureStackTrace;
+      stackCaptures.restore();
     }
   });
 

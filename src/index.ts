@@ -39,7 +39,7 @@ export function GetMetadata<
   T extends Record<string, any>,
   U extends Record<string, any>,
 >(target: U, meta: Class<T, [U]> & { key: symbol }, inherit = true): T {
-  let data = Reflect.getOwnMetadata(meta.key, target) as T;
+  let data: T = Reflect.getOwnMetadata(meta.key, target);
   if (!data) {
     data = new meta(target);
     const proto = Object.getPrototypeOf(target);
@@ -135,11 +135,10 @@ function assertAcyclic(value: unknown, label: string) {
   visit(value, label);
 }
 
-function requireFunction(value: unknown, path: string): Func {
+function assertFunction(value: unknown, path: string): asserts value is Func {
   if (typeof value !== "function") {
     throw new TypeError(`Missing or malformed interface handler at ${path}.`);
   }
-  return value as Func;
 }
 
 function planProxyAttachment(
@@ -151,10 +150,10 @@ function planProxyAttachment(
     return;
   }
   if (IsInterfaceProxy(proxy, "async")) {
-    const callback = requireFunction(implementation, path);
+    assertFunction(implementation, path);
     // SAFETY: IsInterfaceProxy(proxy, "async") above checked the AsyncProxy brand.
     const asyncProxy = proxy as AsyncProxyProtocol;
-    return leasedPlan(asyncProxy, () => asyncProxy.onCall(callback));
+    return leasedPlan(asyncProxy, () => asyncProxy.onCall(implementation));
   }
   if (!IsInterfaceProxy(proxy, "registering")) {
     return;
@@ -162,11 +161,10 @@ function planProxyAttachment(
   if (!isObject(implementation)) {
     throw new TypeError(`Missing or malformed interface handler at ${path}.`);
   }
-  const register = requireFunction(implementation.register, `${path}.register`);
-  const unregister = requireFunction(
-    implementation.unregister,
-    `${path}.unregister`,
-  );
+  const register = implementation.register;
+  assertFunction(register, `${path}.register`);
+  const unregister = implementation.unregister;
+  assertFunction(unregister, `${path}.unregister`);
   // SAFETY: IsInterfaceProxy(proxy, "registering") above checked the RegisteringProxy brand.
   const registeringProxy = proxy as RegisteringProxyProtocol;
   return leasedPlan(registeringProxy, () =>
@@ -184,7 +182,7 @@ function createAttachmentPlan(
     const implemented = implementation[key];
     const proxy =
       typeof declared === "function" && "proxy" in declared
-        ? (declared as Func & { proxy?: unknown }).proxy
+        ? declared.proxy
         : declared;
     const proxyPlan = planProxyAttachment(proxy, implemented, `${path}.${key}`);
     if (proxyPlan) {
@@ -282,13 +280,12 @@ export function ImplementInterface<
   if (isThenable(declaration) || isThenable(implementation)) {
     return Promise.all([declaration, implementation]).then(([decl, impl]) => {
       attachImplementation(decl, impl);
-      return { declaration: decl, implementation: impl as T2 };
+      return { declaration: decl, implementation: impl };
     });
   }
   const decl = declaration;
-  const impl = implementation as Record<string, any>;
-  attachImplementation(decl, impl);
-  return { declaration: decl, implementation: impl as T2 };
+  attachImplementation(decl, implementation);
+  return { declaration: decl, implementation };
 }
 
 /**

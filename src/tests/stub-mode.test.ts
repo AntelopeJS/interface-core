@@ -1,4 +1,4 @@
-import { expect } from "chai";
+import { assert, expect } from "chai";
 import { runInNewContext } from "node:vm";
 
 import { internal } from "../internal";
@@ -27,11 +27,9 @@ describe("test stub mode", () => {
         thrown = error;
       }
 
-      expect(thrown).to.be.instanceOf(MissingProviderError);
-      expect((thrown as MissingProviderError).code).to.equal(
-        MISSING_PROVIDER_CODE,
-      );
-      expect((thrown as Error).message).to.include("without implementation");
+      assert.instanceOf(thrown, MissingProviderError);
+      expect(thrown.code).to.equal(MISSING_PROVIDER_CODE);
+      expect(thrown.message).to.include("without implementation");
     });
 
     it("still queues calls when stub mode is off", () => {
@@ -62,10 +60,8 @@ describe("test stub mode", () => {
         thrown = error;
       }
 
-      expect(thrown).to.be.instanceOf(MissingProviderError);
-      expect((thrown as MissingProviderError).code).to.equal(
-        MISSING_PROVIDER_CODE,
-      );
+      assert.instanceOf(thrown, MissingProviderError);
+      expect(thrown.code).to.equal(MISSING_PROVIDER_CODE);
     });
 
     it("still queues registration when stub mode is off", () => {
@@ -103,10 +99,10 @@ describe("test stub mode", () => {
     });
 
     it("accepts an error carrying the code from another realm", () => {
-      const foreignRealmError = runInNewContext(
+      const foreignRealmError: Error = runInNewContext(
         "Object.assign(new Error('other realm'), { code })",
         { code: MISSING_PROVIDER_CODE },
-      ) as Error;
+      );
 
       expect(foreignRealmError instanceof Error).to.equal(false);
       expect(isMissingProviderError(foreignRealmError)).to.equal(true);
