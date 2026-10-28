@@ -42,11 +42,11 @@ This is randomized testing of real TypeScript code, not an exhaustive proof. It 
 
 ## Coverage record
 
-Last code synchronization is `1fa59c6d291e048fee9292406eb73f667142b819` from `origin/main`. The supplied bundle has identical covered source files at its snapshot commit `059dfc29faea96a29a3bc19e91e3b0ea905b4b00`.
+Last code synchronization is `1ed2cb316c0ea69a313551b9c843d3f357a07f8f`, the commit that makes `attachImplementation` roll back.
 
 | File | Covered functions and role |
 | --- | --- |
-| `src/index.ts` | `ImplementInterface`, `attachImplementation`, `assertAcyclic`, `createAttachmentPlan`, `planProxyAttachment`, `requireFunction`, and object recognition during tree validation and attachment. |
+| `src/index.ts` | `ImplementInterface`, `attachImplementation` and its rollback, `leasedPlan`, `assertAcyclic`, `createAttachmentPlan`, `planProxyAttachment`, `requireFunction`, and object recognition during tree validation and attachment. |
 | `src/proxies.ts` | `InterfaceFunction`, `AsyncProxy.onCall`, `AsyncProxy.call`, `AsyncProxy.invoke`, `RegisteringProxy.onHandlers`, `RegisteringProxy.register`, `RegisteringProxy.unregister`, `RegisteringProxy.replayRegistrations`, `reportRuntimeError`, and attachment ownership capture. |
 | `src/internal.ts` | `runWithModuleContext`, `captureModuleContext`, and runtime flags and reporter hooks used during attachment. |
 | `src/modules.ts` | `RunWithModuleContext` supplies provider ownership. `ReleaseOwner` cleans up the fixture, but lifecycle correctness is not verified. |
@@ -56,21 +56,40 @@ Last code synchronization is `1fa59c6d291e048fee9292406eb73f667142b819` from `or
 
 After covered code changes, compare its behavior with these assumptions and rerun the property. Move the synchronization commit forward only after confirming that the test still describes the new code. Use `pstack:maintain-formal-verification-skill` for a drift pass. A known product failure does not justify claiming a passing result.
 
-## Current finding
+## Finding and fix
 
-At the synchronization commit, validation passes 500 runs. Attachment replay fails with seed `20261028`, shrink path `1:1:1:1`, after two generated cases and three shrinks:
+At `1fa59c6`, validation passed 500 runs and attachment replay failed with seed `20261028`, shrink path `1:1:1:1`, after two generated cases and three shrinks:
 
 ```text
 [[{"groups":[],"kind":"registering","present":true,"fault":"replay"}],true]
 ```
 
-The declaration contains `f0`, a real `RegisteringProxy`. A consumer registers `queued` before attachment. `ImplementInterface` installs both handlers, replays `queued`, and the handler throws. The runtime error reporter rethrows, so `ImplementInterface` throws. A later consumer still obtains `candidate:f0:register,candidate:f0:unregister`, rather than `MissingProviderError`. A valid retry succeeds. `attachImplementation` has no rollback when a plan throws after installing handlers.
+The declaration contains `f0`, a real `RegisteringProxy`. A consumer registers `queued` before attachment. `ImplementInterface` installs both handlers, replays `queued`, and the handler throws. The runtime error reporter rethrows, so `ImplementInterface` throws, yet a later consumer still reached `candidate:f0:register,candidate:f0:unregister` instead of `MissingProviderError`. With an interface function before the throwing proxy and another after it, the first answered and the second did not: a partial provider.
 
-Keep the failing attachment replay scenario enabled until the owner decides how to fix or land the finding.
+Commit `1ed2cb316c0ea69a313551b9c843d3f357a07f8f` fixes it in `attachImplementation`: each plan keeps the lease its attach returns, and a throw detaches every plan the call attempted, in reverse, before the error propagates. Both scenarios now pass 500 runs each.
 
 ## Mutation evidence
 
-The check caught this temporary change to `createAttachmentPlan` in `src/index.ts`:
+Each scratch change below was applied to the fixed code, caught, and removed; the check then reported `2 passing` again.
+
+Dropping the rollback brings the finding back:
+
+```diff
+   } catch (error) {
+-    for (const plan of attempted.reverse()) {
+-      plan.rollback();
+-    }
+     throw error;
+   }
+```
+
+```text
+1 passing
+1 failing
+Counterexample: [[{"groups":[],"kind":"registering","present":true,"fault":"replay"}],true]
+```
+
+Attaching during planning, before validation of later members finishes, is caught by both scenarios:
 
 ```diff
  const proxyPlan = planProxyAttachment(proxy, implemented, `${path}.${key}`);
@@ -86,13 +105,9 @@ The same check command then reported:
 ```text
 0 passing
 2 failing
-Property failed after 4 tests
-{ seed: 20261028, path: "3:2:3:3:5", endOnFailure: true }
 Counterexample: [[{"groups":[],"kind":"sync","present":true,"fault":"valid"},{"groups":[],"kind":"registering","present":true,"fault":"unregister"}],false]
 actual:   ['candidate:f0:input', MissingProviderError]
 expected: [MissingProviderError, MissingProviderError]
 ```
 
-The mutation attaches `f0` before rejecting the malformed `f1.unregister`. Removing the mutation restored 500 passing validation runs and only the existing replay finding. `git diff --exit-code -- src/index.ts` confirmed that the scratch change was gone.
-
-An independent three-member reproduction on unchanged code also confirmed a partial tree. With an interface function before the throwing registering proxy and another after it, `ImplementInterface` threw `replay failure`. Calling both interface functions returned `first attached` and `MissingProviderError` respectively.
+The mutation attaches `f0` while planning, before `f1.unregister` is rejected, so the rollback never sees it.
