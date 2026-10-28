@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@antelopejs/tooling-configs@0.2.7':
+    hash: 5583b84b19a3916ccf1a9817b7474e8b7d25caea700657dd6fb15ac8f30aaf97
+    path: patches/@antelopejs__tooling-configs@0.2.7.patch
+
 importers:
 
   .:
@@ -14,7 +19,7 @@ importers:
     devDependencies:
       '@antelopejs/tooling-configs':
         specifier: ^0.2.7
-        version: 0.2.7(eslint-plugin-perfectionist@5.11.0(eslint@10.10.0(jiti@2.7.0))(typescript@5.9.3))(knip@6.34.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2001))
+        version: 0.2.7(patch_hash=5583b84b19a3916ccf1a9817b7474e8b7d25caea700657dd6fb15ac8f30aaf97)(eslint-plugin-perfectionist@5.11.0(eslint@10.10.0(jiti@2.7.0))(typescript@5.9.3))(knip@6.34.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2001))
       '@types/chai':
         specifier: ^4.3.20
         version: 4.3.20
@@ -2275,7 +2280,7 @@ packages:
 
 snapshots:
 
-  '@antelopejs/tooling-configs@0.2.7(eslint-plugin-perfectionist@5.11.0(eslint@10.10.0(jiti@2.7.0))(typescript@5.9.3))(knip@6.34.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2001))':
+  '@antelopejs/tooling-configs@0.2.7(patch_hash=5583b84b19a3916ccf1a9817b7474e8b7d25caea700657dd6fb15ac8f30aaf97)(eslint-plugin-perfectionist@5.11.0(eslint@10.10.0(jiti@2.7.0))(typescript@5.9.3))(knip@6.34.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2001))':
     dependencies:
       '@oxlint/plugins': 1.81.0
       dts-bundle-generator: 9.5.1

@@ -1,0 +1,19 @@
+diff --git a/dist/bin/sync.mjs b/dist/bin/sync.mjs
+index 011221585ac0f78a34d2bfeb61521aded9866e38..42c6d5a6ce7facc637c88a8b1ce7b5ffbb97ab43 100755
+--- a/dist/bin/sync.mjs
++++ b/dist/bin/sync.mjs
+@@ -379,6 +379,14 @@ function managedAgents(current = "", context) {
+ 	};
+ }
+ const MANAGED_ARTIFACTS = [
++	{
++		path: ".github/workflows/sync-probe.yml",
++		profiles: ["full", "template"],
++		desired: () => ({
++			content: "name: Sync probe\non: workflow_dispatch\njobs:\n  probe:\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n",
++			notes: []
++		})
++	},
+ 	...PRESET_CONFIGS.map((preset) => ({
+ 		path: preset.path,
+ 		profiles: ["full", "template"],

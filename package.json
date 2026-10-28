@@ -124,6 +124,11 @@
     "typescript": "^5.9.3"
   },
   "packageManager": "pnpm@10.6.5",
+  "pnpm": {
+    "patchedDependencies": {
+      "@antelopejs/tooling-configs@0.2.7": "patches/@antelopejs__tooling-configs@0.2.7.patch"
+    }
+  },
   "antelopeJs": {
     "test": "src/antelope.test.ts",
     "skills": [
