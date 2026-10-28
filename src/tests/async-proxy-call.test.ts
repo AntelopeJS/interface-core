@@ -10,8 +10,6 @@ describe("AsyncProxy call", () => {
       throw boom;
     }, true);
 
-    // Must return a rejected promise, never throw synchronously: a sync throw
-    // here would propagate on this line and fail the test.
     const result = proxy.call();
     expect(result).to.be.instanceOf(Promise);
 

@@ -292,12 +292,11 @@ export function ImplementInterface<
 }
 
 /**
- * Gets all instances of a specific interface across the system.
- *
- * Retrieves all connections to implementations of the specified interface.
+ * Gets the connections to the implementations of an interface, as seen by the
+ * module whose work is running.
  *
  * @param interfaceID The ID of the interface to get instances for
- * @returns Array of interface connections
+ * @returns Array of interface connections; empty outside a module context
  */
 export function GetInterfaceInstances(
   interfaceID: string,
@@ -308,13 +307,12 @@ export function GetInterfaceInstances(
 }
 
 /**
- * Gets a specific instance of an interface by ID.
- *
- * Retrieves a specific connection to an implementation of the specified interface.
+ * Gets one connection to an implementation of an interface, as seen by the
+ * module whose work is running.
  *
  * @param interfaceID The ID of the interface to get an instance for
  * @param connectionID The ID of the specific connection to retrieve
- * @returns The interface connection or undefined if not found
+ * @returns The interface connection, or undefined if not found or outside a module context
  */
 export function GetInterfaceInstance(
   interfaceID: string,

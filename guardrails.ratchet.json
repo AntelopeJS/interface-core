@@ -1,6 +1,5 @@
 {
   "rules": {
-    "antelopejs/no-comments": 22,
     "anti-slop/no-known-value-widening": 4,
     "anti-slop/no-runtime-typeof": 9,
     "anti-slop/no-unknown-parameters": 20,

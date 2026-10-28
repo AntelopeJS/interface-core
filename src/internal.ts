@@ -28,7 +28,7 @@ export type ModuleContextKind = "module" | "interface";
 
 /** Module identity and provider routes propagated through asynchronous work. */
 export interface ModuleExecutionContext {
-  /** Stable module ID used by existing lifecycle and attribution APIs. */
+  /** Stable module ID. */
   module: string;
   /**
    * `"interface"` for an interface package's own context. An attachment made

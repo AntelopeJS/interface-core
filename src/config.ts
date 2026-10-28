@@ -1,5 +1,3 @@
-// Module source types
-
 export interface ModuleSource {
   type: "local" | "git" | "package" | "local-folder";
   id?: string;
@@ -40,8 +38,6 @@ export interface ModuleSourceLocalFolder extends ModuleSource {
   reloadCommand?: ModuleInstallCommand;
 }
 
-// Config variables
-
 /**
  * A value a module may publish as a config variable.
  *
@@ -73,8 +69,6 @@ export type ConfigVars = Record<string, ConfigVarValue>;
 export type ConfigVarProvider = (
   config: unknown,
 ) => Promise<ConfigVars | void> | ConfigVars | void;
-
-// Config types
 
 export interface AntelopeTestConfig {
   folder?: string;
@@ -150,8 +144,6 @@ export interface AntelopeLogging {
   formatter?: Record<string, string>;
   dateFormat?: string;
 }
-
-// defineConfig
 
 export interface ConfigContext {
   env: string;
