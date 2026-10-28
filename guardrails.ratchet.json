@@ -1,12 +1,10 @@
 {
   "rules": {
-    "anti-slop/no-known-value-widening": 4,
     "anti-slop/no-runtime-typeof": 9,
-    "anti-slop/no-unknown-parameters": 10,
-    "anti-slop/no-unsafe-dictionary-type": 7,
-    "anti-slop/require-safety-comment-for-type-assertion": 3,
-    "eslint/max-depth": 1,
-    "typescript/no-redundant-type-constituents": 14
+    "anti-slop/no-unknown-parameters": 6,
+    "anti-slop/no-unsafe-dictionary-type": 2,
+    "anti-slop/require-safety-comment-for-type-assertion": 2,
+    "typescript/no-redundant-type-constituents": 7
   },
   "oversizeFiles": {}
 }

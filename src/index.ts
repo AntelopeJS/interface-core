@@ -1,5 +1,6 @@
 import "reflect-metadata";
 
+import type { ConfigVarProvider } from "./config";
 import type { Class } from "./decorators";
 import { type InterfaceConnection, internal } from "./internal";
 import {
@@ -23,6 +24,19 @@ export {
   RegisteringProxy,
   RunWithResponsibleModule,
 } from "./proxies";
+
+function copyMissingProperties<T extends Record<string, any>>(
+  data: T,
+  parent: T,
+) {
+  const target: Record<string, T[keyof T]> = data;
+  const source: Record<string, T[keyof T]> = parent;
+  for (const key of Object.getOwnPropertyNames(source)) {
+    if (!(key in target)) {
+      target[key] = source[key];
+    }
+  }
+}
 
 /**
  * Gets metadata for a target object using the specified metadata class.
@@ -48,11 +62,7 @@ export function GetMetadata<
       if ("inherit" in data && typeof data.inherit === "function") {
         data.inherit(parent);
       } else {
-        for (const key of Object.getOwnPropertyNames(parent) as (keyof T)[]) {
-          if (!(key in data)) {
-            data[key] = parent[key];
-          }
-        }
+        copyMissingProperties(data, parent);
       }
     }
     Reflect.defineMetadata(meta.key, data, target);
@@ -109,16 +119,20 @@ function leasedPlan(
   };
 }
 
-function isObject(value: unknown): value is Record<string, unknown> {
+type Unparsed = Parameters<ConfigVarProvider>[0];
+
+type UnparsedRecord = Record<string, Unparsed>;
+
+function isRecord(value: Unparsed): value is UnparsedRecord {
   return typeof value === "object" && value !== null;
 }
 
-function assertAcyclic(value: unknown, label: string) {
+function assertAcyclic(value: Unparsed, label: string) {
   const visited = new WeakSet<object>();
   const active = new WeakSet<object>();
 
-  const visit = (current: unknown, path: string) => {
-    if (!isObject(current) || visited.has(current)) {
+  const visit = (current: Unparsed, path: string) => {
+    if (!isRecord(current) || visited.has(current)) {
       return;
     }
     if (active.has(current)) {
@@ -135,15 +149,15 @@ function assertAcyclic(value: unknown, label: string) {
   visit(value, label);
 }
 
-function assertFunction(value: unknown, path: string): asserts value is Func {
+function assertFunction(value: Unparsed, path: string): asserts value is Func {
   if (typeof value !== "function") {
     throw new TypeError(`Missing or malformed interface handler at ${path}.`);
   }
 }
 
 function planProxyAttachment(
-  proxy: unknown,
-  implementation: unknown,
+  proxy: Unparsed,
+  implementation: Unparsed,
   path: string,
 ): AttachmentPlan | undefined {
   if (IsInterfaceProxy(proxy, "event")) {
@@ -158,7 +172,7 @@ function planProxyAttachment(
   if (!IsInterfaceProxy(proxy, "registering")) {
     return;
   }
-  if (!isObject(implementation)) {
+  if (!isRecord(implementation)) {
     throw new TypeError(`Missing or malformed interface handler at ${path}.`);
   }
   const register = implementation.register;
@@ -173,8 +187,8 @@ function planProxyAttachment(
 }
 
 function createAttachmentPlan(
-  declaration: Record<string, unknown>,
-  implementation: Record<string, unknown>,
+  declaration: UnparsedRecord,
+  implementation: UnparsedRecord,
   path = "implementation",
 ): AttachmentPlan[] {
   const plans: AttachmentPlan[] = [];
@@ -189,8 +203,8 @@ function createAttachmentPlan(
       plans.push(proxyPlan);
       continue;
     }
-    if (isObject(declared) && !IsInterfaceProxy(declared)) {
-      const nestedImplementation = isObject(implemented) ? implemented : {};
+    if (isRecord(declared) && !IsInterfaceProxy(declared)) {
+      const nestedImplementation = isRecord(implemented) ? implemented : {};
       plans.push(
         ...createAttachmentPlan(
           declared,
@@ -203,11 +217,8 @@ function createAttachmentPlan(
   return plans;
 }
 
-function attachImplementation(
-  declaration: Record<string, unknown>,
-  implementation: Record<string, unknown>,
-) {
-  if (!isObject(declaration) || !isObject(implementation)) {
+function attachImplementation(declaration: Unparsed, implementation: Unparsed) {
+  if (!isRecord(declaration) || !isRecord(implementation)) {
     throw new TypeError(
       "Interface declaration and implementation must be objects.",
     );
@@ -228,7 +239,7 @@ function attachImplementation(
   }
 }
 
-function isThenable(value: unknown): value is PromiseLike<unknown> {
+function isThenable(value: Unparsed): value is PromiseLike<unknown> {
   return (
     (typeof value === "object" || typeof value === "function") &&
     value !== null &&
