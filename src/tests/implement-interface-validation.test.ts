@@ -2,7 +2,15 @@ import { expect } from "chai";
 import { runInNewContext } from "node:vm";
 
 import { internal } from "../internal";
-import { AsyncProxy, ImplementInterface, RegisteringProxy } from "..";
+import {
+  AsyncProxy,
+  ImplementInterface,
+  InterfaceFunction,
+  ModuleContextInvalidatedError,
+  RegisteringProxy,
+  ReleaseOwner,
+  RunWithModuleContext,
+} from "..";
 
 describe("ImplementInterface validation", () => {
   afterEach(() => {
@@ -25,6 +33,26 @@ describe("ImplementInterface validation", () => {
       (reason: unknown) => reason,
     );
     expect(error).to.be.instanceOf(Error);
+  });
+
+  it("keeps the current provider when a released owner fails to implement", async () => {
+    const declaration = {
+      greet: InterfaceFunction<() => string>("test.stale-owner.greet"),
+    };
+    RunWithModuleContext({ module: "provider", owner: "provider#2" }, () =>
+      ImplementInterface(declaration, { greet: () => "healthy" }),
+    );
+
+    RunWithModuleContext({ module: "provider", owner: "provider#1" }, () => {
+      ReleaseOwner("provider#1");
+      expect(() =>
+        ImplementInterface(declaration, { greet: () => "stale" }),
+      ).to.throw(ModuleContextInvalidatedError);
+    });
+
+    internal.testStubMode = true;
+    expect(await declaration.greet()).to.equal("healthy");
+    ReleaseOwner("provider#2");
   });
 
   it("rejects malformed registering handlers atomically", () => {
