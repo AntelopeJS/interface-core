@@ -46,7 +46,7 @@ function countStackCaptures() {
   };
 }
 
-describe("explicit module ownership", () => {
+function isolateRuntimeState() {
   let testStubMode: boolean;
 
   beforeEach(() => {
@@ -58,6 +58,10 @@ describe("explicit module ownership", () => {
   afterEach(() => {
     internal.testStubMode = testStubMode;
   });
+}
+
+describe("explicit module ownership", () => {
+  isolateRuntimeState();
 
   it("resolves without capturing a stack", () => {
     const stackCaptures = countStackCaptures();
@@ -136,6 +140,10 @@ describe("explicit module ownership", () => {
     expect(oldError).to.be.instanceOf(ModuleContextInvalidatedError);
     expect(calls).to.deep.equal(["new"]);
   });
+});
+
+describe("explicit module ownership of concurrent and nested work", () => {
+  isolateRuntimeState();
 
   it("invalidates concurrent work from the destroyed generation", async () => {
     const events = new EventProxy<() => void>();
@@ -213,6 +221,10 @@ describe("explicit module ownership", () => {
       ModuleContextInvalidatedError,
     );
   });
+});
+
+describe("explicit module ownership of providers", () => {
+  isolateRuntimeState();
 
   it("restores ownership when nested work throws", () => {
     RunWithResponsibleModule("outer", () => {

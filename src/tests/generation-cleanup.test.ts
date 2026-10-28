@@ -120,6 +120,12 @@ describe("generation-owned cleanup", () => {
     expect(() => proxy.register("detached")).to.throw();
     expect(internal.knownRegisters.has("split#new")).to.equal(false);
   });
+});
+
+describe("generation-owned cleanup of reverse split handlers", () => {
+  afterEach(() => {
+    internal.testStubMode = false;
+  });
 
   it("keeps reverse split handlers until their owner is destroyed", () => {
     const proxy = new RegisteringProxy<(id: string) => void>(
