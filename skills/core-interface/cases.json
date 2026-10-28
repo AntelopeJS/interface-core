@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "log-levels",
+      "area": "framework",
+      "style": "clean",
+      "prompt": "What log levels are available?",
+      "origin": "docs-assistant",
+      "expect": {
+        "skills": ["core-interface"],
+        "acceptable": ["antelopejs"],
+        "mustMention": ["Logging"]
+      }
+    },
+    {
+      "id": "log-levels-casual",
+      "area": "framework",
+      "style": "casual",
+      "prompt": "wat r the log levels",
+      "origin": "docs-assistant",
+      "expect": {
+        "skills": ["core-interface"],
+        "acceptable": ["antelopejs"],
+        "mustMention": ["Logging"]
+      }
+    },
+    {
+      "id": "proxies",
+      "area": "framework",
+      "style": "clean",
+      "prompt": "What is a proxy for?",
+      "origin": "docs-assistant",
+      "expect": {
+        "skills": ["core-interface"],
+        "acceptable": [
+          "antelopejs",
+          "ajs-author-interface",
+          "ajs-consume-interface"
+        ]
+      }
+    },
+    {
+      "id": "proxies-casual",
+      "area": "framework",
+      "style": "casual",
+      "prompt": "proxies, what are they actually for",
+      "origin": "docs-assistant",
+      "expect": {
+        "skills": ["core-interface"],
+        "acceptable": [
+          "antelopejs",
+          "ajs-author-interface",
+          "ajs-consume-interface"
+        ]
+      }
+    },
+    {
+      "id": "core-interface-publish-neighbour",
+      "area": "framework",
+      "style": "clean",
+      "prompt": "After a breaking change to my interface package, which version should I bump and how do I publish it to the registry?",
+      "expect": {
+        "skills": ["ajs-author-interface"],
+        "acceptable": ["antelopejs", "ajs-cli"],
+        "avoid": ["core-interface"]
+      }
+    },
+    {
+      "id": "core-interface-event-proxy",
+      "area": "framework",
+      "style": "clean",
+      "prompt": "How do I declare an interface event that a provider module emits whenever a user is created, so other modules can subscribe across modules?",
+      "expect": {
+        "skills": ["core-interface"],
+        "acceptable": [
+          "antelopejs",
+          "ajs-author-interface",
+          "ajs-consume-interface"
+        ],
+        "mustMention": ["EventProxy"]
+      }
+    },
+    {
+      "id": "core-interface-module-started-casual",
+      "area": "framework",
+      "style": "casual",
+      "prompt": "how do i run code when a module is started, which event is that",
+      "expect": {
+        "skills": ["core-interface"],
+        "acceptable": ["antelopejs", "ajs-consume-interface"],
+        "mustMention": ["ModuleStarted"]
+      }
+    }
+  ]
+}
