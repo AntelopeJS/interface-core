@@ -71,6 +71,11 @@ describe("test stub mode", () => {
     it("still queues registration when stub mode is off", () => {
       const proxy = new RegisteringProxy<(id: string) => void>();
       proxy.register("id1");
+
+      const replayed: string[] = [];
+      proxy.onRegister((id) => replayed.push(id), true);
+
+      expect(replayed).to.deep.equal(["id1"]);
     });
 
     it("registers normally when callback attached in stub mode", () => {

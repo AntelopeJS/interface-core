@@ -56,10 +56,10 @@ describe("root interface declarations", () => {
   });
 
   it("loads complete canonical declarations when the root loads first", () => {
-    runFreshProcess("root,runtime,modules");
+    expect(() => runFreshProcess("root,runtime,modules")).not.to.throw();
   });
 
   it("loads complete canonical declarations when subpaths load first", () => {
-    runFreshProcess("modules,runtime,root");
+    expect(() => runFreshProcess("modules,runtime,root")).not.to.throw();
   });
 });
