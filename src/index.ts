@@ -89,7 +89,7 @@ type InterfaceImplType<T> =
         ? never
         : T extends (...args: infer A) => infer R
           ? (...args: A) => Awaited<R> | R
-          : T extends Record<string, any>
+          : T extends object
             ? InterfaceToImpl<T>
             : never;
 

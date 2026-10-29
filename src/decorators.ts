@@ -158,7 +158,7 @@ export function MakePropertyDecorator<T extends any[]>(
  * @returns Decorator factory function that accepts parameters and returns a class or property decorator
  */
 export function MakePropertyAndClassDecorator<T extends any[]>(
-  handler: Function2<[PropertyDecorator, ClassDecorator], T, any | undefined>,
+  handler: Function2<[PropertyDecorator, ClassDecorator], T, any>,
 ) {
   return Decorator2<[PropertyDecorator, ClassDecorator], T, any>(handler);
 }
@@ -186,7 +186,7 @@ export function MakeMethodDecorator<T extends any[]>(
  * @returns Decorator factory
  */
 export function MakeMethodAndClassDecorator<T extends any[]>(
-  handler: Function3<[MethodDecorator, ClassDecorator], T, any | undefined>,
+  handler: Function3<[MethodDecorator, ClassDecorator], T, any>,
 ) {
   return Decorator3<[MethodDecorator, ClassDecorator], T, any>(handler);
 }
@@ -217,7 +217,7 @@ export function MakeMethodAndPropertyAndClassDecorator<T extends any[]>(
   handler: Function3<
     [MethodDecorator, PropertyDecorator, ClassDecorator],
     T,
-    any | undefined
+    any
   >,
 ) {
   return Decorator3<
@@ -250,7 +250,7 @@ export function MakeParameterDecorator<T extends any[]>(
  * @returns Decorator factory
  */
 export function MakeParameterAndClassDecorator<T extends any[]>(
-  handler: Function3<[ParameterDecorator, ClassDecorator], T, any | undefined>,
+  handler: Function3<[ParameterDecorator, ClassDecorator], T, any>,
 ) {
   return Decorator3<[ParameterDecorator, ClassDecorator], T, any>(handler);
 }
@@ -281,7 +281,7 @@ export function MakeParameterAndPropertyAndClassDecorator<T extends any[]>(
   handler: Function3<
     [ParameterDecorator, PropertyDecorator, ClassDecorator],
     T,
-    any | undefined
+    any
   >,
 ) {
   return Decorator3<
@@ -317,7 +317,7 @@ export function MakeParameterAndMethodAndClassDecorator<T extends any[]>(
   handler: Function3<
     [ParameterDecorator, MethodDecorator, ClassDecorator],
     T,
-    any | undefined
+    any
   >,
 ) {
   return Decorator3<
@@ -363,7 +363,7 @@ export function MakeParameterAndMethodAndPropertyAndClassDecorator<
   handler: Function3<
     [ParameterDecorator, MethodDecorator, PropertyDecorator, ClassDecorator],
     T,
-    any | undefined
+    any
   >,
 ) {
   return Decorator3<

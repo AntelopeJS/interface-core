@@ -519,7 +519,6 @@ export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
       try {
         runAttachment(attachment, (callback) => callback(id, ...entry.args));
       } catch (error) {
-        internal.replayErrorReporter?.(id, error);
         reportRuntimeError(
           error,
           "register-replay",

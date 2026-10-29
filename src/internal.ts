@@ -91,8 +91,7 @@ export interface InterfaceRuntime {
   nextLeaseGeneration: number;
   maxPendingOperations: number;
   asyncContextReporter?: (trace: NodeJS.CallSite[]) => void;
-  runtimeErrorReporter?: (error: unknown, details: RuntimeErrorDetails) => void;
-  replayErrorReporter?: (id: unknown, error: unknown) => void;
+  runtimeErrorReporter?: (cause: unknown, details: RuntimeErrorDetails) => void;
   addAsyncProxy(
     module: string,
     proxy: RuntimeCleanup | { detach(): void },

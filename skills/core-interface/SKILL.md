@@ -123,6 +123,9 @@ ch.Debug("query", { ms: 12 });
 - `GetMetadata` needs a metadata class with a static `key: symbol`; it inherits from the prototype
   chain by default (pass `inherit = false` to disable). `reflect-metadata` is loaded by the main
   entry point.
+- `ModuleDefinition.source` is a `ModuleDefinitionSource`: a `type` string (`local`, `git`,
+  `package`, `local-folder` are built in) plus the optional fields of those kinds; unknown fields
+  are type errors. `ConfigVarProvider<Config = unknown>` takes the module's configuration type.
 - Decorator factory callbacks split their arguments: decorator targets first (class / target+key /
   target+key+descriptor), then the factory's own parameters.
 
