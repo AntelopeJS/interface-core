@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.3.0
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.2.7...v0.3.0)
+
+### 🚀 Enhancements
+
+- **core:** ⚠️  Tighten the published contract ([#54](https://github.com/AntelopeJS/interface-core/pull/54))
+
+### 💅 Refactors
+
+- Clean the repo with the guardrail pack ([#52](https://github.com/AntelopeJS/interface-core/pull/52))
+- Clear avoidable findings with pack 0.2.11 ([#53](https://github.com/AntelopeJS/interface-core/pull/53))
+
+### ✅ Tests
+
+- **skills:** Add eval cases for core-interface ([#48](https://github.com/AntelopeJS/interface-core/pull/48))
+
+#### ⚠️ Breaking Changes
+
+- **core:** ⚠️  Tighten the published contract ([#54](https://github.com/AntelopeJS/interface-core/pull/54))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli ([@Upd4ting](http://github.com/Upd4ting))
+
 ## v0.2.7
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.2.6...v0.2.7)
