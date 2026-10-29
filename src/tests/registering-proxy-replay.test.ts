@@ -4,14 +4,14 @@ import { RegisteringProxy } from "..";
 import { internal } from "../internal";
 
 describe("RegisteringProxy onRegister replay", () => {
-  let savedReporter: typeof internal.replayErrorReporter;
+  let savedReporter: typeof internal.runtimeErrorReporter;
 
   beforeEach(() => {
-    savedReporter = internal.replayErrorReporter;
+    savedReporter = internal.runtimeErrorReporter;
   });
 
   afterEach(() => {
-    internal.replayErrorReporter = savedReporter;
+    internal.runtimeErrorReporter = savedReporter;
   });
 
   it("replays every entry even when an earlier callback throws", () => {
@@ -21,8 +21,13 @@ describe("RegisteringProxy onRegister replay", () => {
     proxy.register("c", "gamma");
 
     const seen: string[] = [];
-    const errors: Array<{ id: unknown; err: unknown }> = [];
-    internal.replayErrorReporter = (id, err) => errors.push({ id, err });
+    const errors: Array<{ id: unknown; err: unknown; operation: string }> = [];
+    internal.runtimeErrorReporter = (err, details) =>
+      errors.push({
+        id: details.registrationId,
+        err,
+        operation: details.operation,
+      });
 
     proxy.onRegister((id, arg) => {
       seen.push(`${id}:${arg}`);
@@ -33,12 +38,13 @@ describe("RegisteringProxy onRegister replay", () => {
 
     expect(seen).to.deep.equal(["a:alpha", "b:beta", "c:gamma"]);
     expect(errors).to.have.length(1);
+    expect(errors[0].operation).to.equal("register-replay");
     expect(errors[0].id).to.equal("a");
     expect(errors[0].err).to.be.instanceOf(Error);
   });
 
   it("does not require a reporter to remain resilient", () => {
-    internal.replayErrorReporter = undefined;
+    internal.runtimeErrorReporter = undefined;
     const proxy = new RegisteringProxy<(id: string) => void>();
     proxy.register("a");
     proxy.register("b");

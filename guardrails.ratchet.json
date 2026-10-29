@@ -1,8 +1,6 @@
 {
   "rules": {
-    "anti-slop/no-unknown-parameters": 6,
-    "anti-slop/no-unsafe-dictionary-type": 2,
-    "typescript/no-redundant-type-constituents": 7
+    "anti-slop/no-unknown-parameters": 2
   },
   "oversizeFiles": {}
 }

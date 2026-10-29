@@ -66,8 +66,8 @@ export type ConfigVars = Record<string, ConfigVarValue>;
  * deadlocks the startup. The core interfaces registered before the module
  * lifecycle starts, `GetRuntimeInfo()` among them, remain available.
  */
-export type ConfigVarProvider = (
-  config: unknown,
+export type ConfigVarProvider<Config = unknown> = (
+  config: Config,
 ) => Promise<ConfigVars | void> | ConfigVars | void;
 
 export interface AntelopeTestConfig {

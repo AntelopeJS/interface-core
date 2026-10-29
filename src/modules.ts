@@ -1,4 +1,11 @@
-import type { AntelopeModuleConfig } from "./config";
+import type {
+  AntelopeModuleConfig,
+  ModuleSource,
+  ModuleSourceGit,
+  ModuleSourceLocal,
+  ModuleSourceLocalFolder,
+  ModuleSourcePackage,
+} from "./config";
 import { EventProxy, InterfaceFunction } from "./proxies";
 import {
   getModuleContext,
@@ -184,6 +191,19 @@ export function ReleaseOwner(owner: string): void {
 }
 
 /**
+ * Where a module is loaded from: a `type` naming the loader, plus the optional
+ * fields of the built-in source kinds (`local`, `git`, `package` and
+ * `local-folder`). Fields outside that set are rejected, and a source known
+ * only by its `type` is accepted.
+ */
+export type ModuleDefinitionSource = Omit<ModuleSource, "type"> & {
+  type: string;
+} & Partial<Omit<ModuleSourceLocal, "type">> &
+  Partial<Omit<ModuleSourceGit, "type">> &
+  Partial<Omit<ModuleSourcePackage, "type">> &
+  Partial<Omit<ModuleSourceLocalFolder, "type">>;
+
+/**
  * Configuration for defining a module to be loaded into the system.
  *
  * Contains all necessary information to locate, load, and configure a module.
@@ -194,7 +214,7 @@ export interface ModuleDefinition {
    * The type field indicates the loading mechanism to use.
    * Additional fields depend on the source type.
    */
-  source: { type: string } & Record<string, any>;
+  source: ModuleDefinitionSource;
 
   /**
    * Optional configuration data passed to the module during initialization.
