@@ -94,10 +94,16 @@ interface MaybeBranded {
   readonly [PROXY_BRAND]?: ProxyBrand;
 }
 
+function isObjectLike(
+  value: Parameters<typeof IsInterfaceProxy>[0],
+): value is object {
+  return (typeof value === "object" || typeof value === "function") && !!value;
+}
+
 function readBrand(
   value: Parameters<typeof IsInterfaceProxy>[0],
 ): ProxyBrand | undefined {
-  if ((typeof value !== "object" && typeof value !== "function") || !value) {
+  if (!isObjectLike(value)) {
     return;
   }
   const holder: MaybeBranded = value;

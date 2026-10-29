@@ -1,9 +1,7 @@
 {
   "rules": {
-    "anti-slop/no-runtime-typeof": 9,
     "anti-slop/no-unknown-parameters": 6,
     "anti-slop/no-unsafe-dictionary-type": 2,
-    "anti-slop/require-safety-comment-for-type-assertion": 2,
     "typescript/no-redundant-type-constituents": 7
   },
   "oversizeFiles": {}
