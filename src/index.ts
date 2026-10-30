@@ -38,7 +38,7 @@ function copyMissingProperties<T extends Record<string, any>>(
   const target: Record<string, T[keyof T]> = data;
   const source: Record<string, T[keyof T]> = parent;
   for (const key of Object.getOwnPropertyNames(source)) {
-    if (!(key in target)) {
+    if (!Object.hasOwn(target, key)) {
       target[key] = source[key];
     }
   }
