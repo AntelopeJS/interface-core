@@ -1,6 +1,7 @@
 import { expect } from "chai";
 
 import { AsyncProxy } from "..";
+import { rejectionOf } from "./rejection";
 
 describe("AsyncProxy call", () => {
   it("rejects instead of throwing synchronously when the callback throws", async () => {
@@ -13,10 +14,7 @@ describe("AsyncProxy call", () => {
     const result = proxy.call();
     expect(result).to.be.instanceOf(Promise);
 
-    const err = await result.then(
-      () => expect.fail("expected call() to reject"),
-      (e) => e,
-    );
+    const err = await rejectionOf(result, Error);
     expect(err).to.equal(boom);
   });
 
@@ -36,10 +34,7 @@ describe("AsyncProxy call", () => {
       throw boom;
     }, true);
 
-    const err = await pending.then(
-      () => expect.fail("expected queued call to reject"),
-      (e) => e,
-    );
+    const err = await rejectionOf(pending, Error);
     expect(err).to.equal(boom);
   });
 });

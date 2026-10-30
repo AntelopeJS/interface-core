@@ -2,6 +2,7 @@ import { expect } from "chai";
 import { runInNewContext } from "node:vm";
 
 import { internal } from "../internal";
+import { rejectionOf } from "./rejection";
 import {
   AsyncProxy,
   ImplementInterface,
@@ -33,10 +34,7 @@ describe("ImplementInterface validation", () => {
     ).to.throw("implementation.second");
 
     internal.testStubMode = true;
-    const error = await first.call().then(
-      () => undefined,
-      (reason: PromiseRejectedResult["reason"]) => reason,
-    );
+    const error = await rejectionOf(first.call(), Error);
     expect(error).to.be.instanceOf(Error);
   });
 

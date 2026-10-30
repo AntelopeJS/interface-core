@@ -15,15 +15,19 @@ import {
 function runDetached(
   module: string,
   callback: () => void,
-): Promise<PromiseRejectedResult["reason"]> {
-  return new Promise((resolve) => {
+): Promise<Error | undefined> {
+  return new Promise((resolve, reject) => {
     RunWithResponsibleModule(module, () => {
       setImmediate(() => {
         try {
           callback();
           resolve(undefined);
         } catch (error) {
-          resolve(error);
+          if (error instanceof Error) {
+            resolve(error);
+          } else {
+            reject(error);
+          }
         }
       });
     });
@@ -31,8 +35,7 @@ function runDetached(
 }
 
 function countStackCaptures() {
-  const original: typeof Error.captureStackTrace =
-    Object.getOwnPropertyDescriptor(Error, "captureStackTrace")?.value;
+  const original = Error.captureStackTrace.bind(Error);
   let captures = 0;
   Error.captureStackTrace = (...args) => {
     captures += 1;
