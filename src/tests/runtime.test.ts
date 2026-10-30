@@ -1,7 +1,7 @@
 import { expect } from "chai";
 
 import * as runtime from "../runtime";
-import { type AsyncProxy, ImplementInterface } from "..";
+import { type AsyncProxy, ImplementInterface, IsInterfaceProxy } from "..";
 import {
   type DevServerEndpoint,
   GetRuntimeInfo,
@@ -22,7 +22,7 @@ type RuntimeFunction = typeof GetRuntimeInfo | typeof RegisterDevServer;
 function hasProxy(
   func: RuntimeFunction,
 ): func is RuntimeFunction & ProxiedFunction {
-  return "proxy" in func;
+  return "proxy" in func && IsInterfaceProxy(func.proxy, "async");
 }
 
 function resetProxy(func: RuntimeFunction) {
