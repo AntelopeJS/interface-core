@@ -37,7 +37,7 @@ describe("global runtime protocol", () => {
     );
 
     expect(await localProxy.call()).to.equal("local");
-    const foreignResult = await Promise.race([
+    const foreignResult: unknown = await Promise.race([
       foreignProxy.call(),
       new Promise((resolve) => setTimeout(() => resolve("unattached"), 20)),
     ]);
