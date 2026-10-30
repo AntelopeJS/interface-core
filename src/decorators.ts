@@ -82,7 +82,7 @@ function Decorator1<F extends Func[], T extends any[], R = void>(
   handler: Function1<F, T, R>,
 ): (...args: T) => UnionToIntersection<ArrayValues<F>> {
   return (...args: T): any =>
-    (a: any) =>
+    (a: Parameters<typeof handler>[0]) =>
       handler(a, ...args);
 }
 
@@ -96,7 +96,7 @@ function Decorator2<F extends Func[], T extends any[], R = void>(
   handler: Function2<F, T, R>,
 ): (...args: T) => UnionToIntersection<ArrayValues<F>> {
   return (...args: T): any =>
-    (a: any, b: any) =>
+    (a: Parameters<typeof handler>[0], b: Parameters<typeof handler>[1]) =>
       handler(a, b, ...args);
 }
 
@@ -110,7 +110,11 @@ function Decorator3<F extends Func[], T extends any[], R = void>(
   handler: Function3<F, T, R>,
 ): (...args: T) => UnionToIntersection<ArrayValues<F>> {
   return (...args: T): any =>
-    (a: any, b: any, c: any) =>
+    (
+      a: Parameters<typeof handler>[0],
+      b: Parameters<typeof handler>[1],
+      c: Parameters<typeof handler>[2],
+    ) =>
       handler(a, b, c, ...args);
 }
 
