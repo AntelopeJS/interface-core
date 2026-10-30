@@ -8,6 +8,15 @@ import eventLog from "./listener";
  * uses an event-based system for log collection and processing.
  */
 export namespace Logging {
+  function emit(levelId: number, channel: string, args: unknown[]): void {
+    eventLog.emit({
+      time: Date.now(),
+      channel,
+      levelId,
+      args,
+    });
+  }
+
   /**
    * Log severity levels in descending order of importance.
    * Higher numerical values indicate higher severity.
@@ -42,7 +51,7 @@ export namespace Logging {
      * @param args - Values to log, which can be of any type and will be serialized appropriately
      */
     public Error(...args: any[]): void {
-      Write(Level.ERROR, this.channel, ...args);
+      emit(Level.ERROR, this.channel, args);
     }
 
     /**
@@ -54,7 +63,7 @@ export namespace Logging {
      * @param args - Values to log, which can be of any type and will be serialized appropriately
      */
     public Warn(...args: any[]): void {
-      Write(Level.WARN, this.channel, ...args);
+      emit(Level.WARN, this.channel, args);
     }
 
     /**
@@ -66,7 +75,7 @@ export namespace Logging {
      * @param args - Values to log, which can be of any type and will be serialized appropriately
      */
     public Info(...args: any[]): void {
-      Write(Level.INFO, this.channel, ...args);
+      emit(Level.INFO, this.channel, args);
     }
 
     /**
@@ -77,7 +86,7 @@ export namespace Logging {
      * @param args - Values to log, which can be of any type and will be serialized appropriately
      */
     public Debug(...args: any[]): void {
-      Write(Level.DEBUG, this.channel, ...args);
+      emit(Level.DEBUG, this.channel, args);
     }
 
     /**
@@ -89,7 +98,7 @@ export namespace Logging {
      * @param args - Values to log, which can be of any type and will be serialized appropriately
      */
     public Trace(...args: any[]): void {
-      Write(Level.TRACE, this.channel, ...args);
+      emit(Level.TRACE, this.channel, args);
     }
 
     /**
@@ -101,7 +110,7 @@ export namespace Logging {
      * @param args - Values to log, which can be of any type and will be serialized appropriately
      */
     public Write(levelId: number, ...args: any[]): void {
-      Write(levelId, this.channel, ...args);
+      emit(levelId, this.channel, args);
     }
   }
 
@@ -170,12 +179,7 @@ export namespace Logging {
     channel: string,
     ...args: any[]
   ): void {
-    eventLog.emit({
-      time: Date.now(),
-      channel,
-      levelId,
-      args,
-    });
+    emit(levelId, channel, args);
   }
 }
 export default Logging;
