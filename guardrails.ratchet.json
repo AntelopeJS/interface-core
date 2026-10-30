@@ -4,7 +4,7 @@
     "antelopejs/no-inherited-key-lookup": 1,
     "anti-slop/no-unknown-parameters": 2,
     "typescript/no-unsafe-argument": 1,
-    "typescript/no-unsafe-assignment": 6,
+    "typescript/no-unsafe-assignment": 5,
     "typescript/no-unsafe-return": 1
   },
   "oversizeFiles": {}

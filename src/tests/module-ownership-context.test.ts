@@ -35,6 +35,10 @@ function runDetached(
 }
 
 function countStackCaptures() {
+  const descriptor = Object.getOwnPropertyDescriptor(
+    Error,
+    "captureStackTrace",
+  );
   const original = Error.captureStackTrace.bind(Error);
   let captures = 0;
   Error.captureStackTrace = (...args) => {
@@ -44,7 +48,9 @@ function countStackCaptures() {
   return {
     captures: () => captures,
     restore: () => {
-      Error.captureStackTrace = original;
+      if (descriptor) {
+        Object.defineProperty(Error, "captureStackTrace", descriptor);
+      }
     },
   };
 }
