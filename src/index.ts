@@ -155,7 +155,7 @@ function assertAcyclic(value: Unparsed, label: string) {
   visit(value, label);
 }
 
-function carriesProxy(value: Unparsed): value is Func & { proxy: Unparsed } {
+function carriesProxy(value: Unparsed): value is Func & { proxy: unknown } {
   return typeof value === "function" && "proxy" in value;
 }
 
