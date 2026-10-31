@@ -196,6 +196,21 @@ function planProxyAttachment(
   );
 }
 
+/**
+ * The value an implementation holds under a key: an own property or one its
+ * prototype chain supplies (a class instance's methods), never one that only
+ * `Object.prototype` answers (`constructor`, `toString`).
+ */
+function implementedAt(implementation: UnparsedRecord, key: string): Unparsed {
+  let holder: Unparsed = implementation;
+  while (isRecord(holder) && holder !== Object.prototype) {
+    if (Object.hasOwn(holder, key)) {
+      return holder[key];
+    }
+    holder = Reflect.getPrototypeOf(holder);
+  }
+}
+
 function createAttachmentPlan(
   declaration: UnparsedRecord,
   implementation: UnparsedRecord,
@@ -203,7 +218,7 @@ function createAttachmentPlan(
 ): AttachmentPlan[] {
   const plans: AttachmentPlan[] = [];
   for (const [key, declared] of Object.entries(declaration)) {
-    const implemented = implementation[key];
+    const implemented = implementedAt(implementation, key);
     const proxy = carriesProxy(declared) ? declared.proxy : declared;
     const proxyPlan = planProxyAttachment(proxy, implemented, `${path}.${key}`);
     if (proxyPlan) {
