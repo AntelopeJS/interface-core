@@ -108,6 +108,21 @@ describe("ImplementInterface validation", () => {
     );
   });
 
+  it("attaches an Object.prototype name that a class implements itself", async () => {
+    class Provider {
+      toString() {
+        return "from the class";
+      }
+    }
+    const toString = new AsyncProxy<() => string>(
+      "test.class-instance.toString",
+    );
+
+    ImplementInterface({ toString }, new Provider());
+
+    expect(await toString.call()).to.equal("from the class");
+  });
+
   it("awaits thenables and promises created in another realm", async () => {
     const proxy = new AsyncProxy<() => string>("test.cross-realm-promise");
     const declaration: PromiseLike<{ proxy: AsyncProxy<() => string> }> =
