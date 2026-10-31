@@ -46,7 +46,7 @@ export const GetGreeting = InterfaceFunction<(name: string) => string>();
 
 Implement it and call it from a module:
 
-```ts
+```ts fragment
 // src/index.ts
 import { ImplementInterface } from "@antelopejs/interface-core";
 import { Logging } from "@antelopejs/interface-core/logging";
@@ -78,13 +78,7 @@ An interface function always returns a promise, even when the implementation is 
 
 ## Compatibility
 
-`@antelopejs/core` implements this package. Use the line your core version declares:
-
-| `@antelopejs/core`   | `@antelopejs/interface-core` |
-| -------------------- | ---------------------------- |
-| `1.12.x` to `1.13.x` | `0.1.x`                      |
-| `1.14.x` to `1.15.1` | `0.2.x`                      |
-| `1.15.2`             | `>=0.2.3 <0.3.0`             |
+`@antelopejs/core` implements this package. Each core release declares the `@antelopejs/interface-core` range it works with in the `dependencies` of its `package.json`.
 
 ## Contributing
 
