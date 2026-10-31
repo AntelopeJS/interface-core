@@ -196,6 +196,21 @@ function planProxyAttachment(
   );
 }
 
+/**
+ * The value an implementation answers under a key, read as `implementation[key]`
+ * so getters and Proxy traps see the implementation as their receiver. A key
+ * that is an `Object.prototype` name, is not the implementation's own, and
+ * resolves to that root's own value is treated as not implemented.
+ */
+function implementedAt(implementation: UnparsedRecord, key: string): Unparsed {
+  const answeredByRoot =
+    Object.hasOwn(Object.prototype, key) &&
+    !Object.hasOwn(implementation, key) &&
+    implementation[key] ===
+      Object.getOwnPropertyDescriptor(Object.prototype, key)?.value;
+  return answeredByRoot ? undefined : implementation[key];
+}
+
 function createAttachmentPlan(
   declaration: UnparsedRecord,
   implementation: UnparsedRecord,
@@ -203,7 +218,7 @@ function createAttachmentPlan(
 ): AttachmentPlan[] {
   const plans: AttachmentPlan[] = [];
   for (const [key, declared] of Object.entries(declaration)) {
-    const implemented = implementation[key];
+    const implemented = implementedAt(implementation, key);
     const proxy = carriesProxy(declared) ? declared.proxy : declared;
     const proxyPlan = planProxyAttachment(proxy, implemented, `${path}.${key}`);
     if (proxyPlan) {
