@@ -20,7 +20,8 @@ describe("global runtime protocol", () => {
     const temporary = mkdtempSync(join(process.cwd(), ".interface-core-copy-"));
     copyPath = join(temporary, "dist");
     cpSync(join(__dirname, ".."), copyPath, { recursive: true });
-    const foreign: typeof import("..") = require(join(copyPath, "index.js"));
+    // SAFETY: require returns any; the path is the copy of this package's own dist made just above, which exports the same declarations.
+    const foreign = require(join(copyPath, "index.js")) as typeof import("..");
     const localProxy = new AsyncProxy<() => string>("test.cross-copy");
     const foreignProxy = new foreign.AsyncProxy("test.cross-copy");
 

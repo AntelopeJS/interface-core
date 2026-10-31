@@ -1,7 +1,9 @@
 {
-  "rules": {},
+  "rules": {
+    "anti-slop/no-unknown-parameters": 2
+  },
   "tsExpectError": 0,
   "tsIgnore": 0,
-  "safety": 2,
+  "safety": 8,
   "config": {}
 }

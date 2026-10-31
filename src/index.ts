@@ -59,10 +59,12 @@ export function GetMetadata<
   T extends Record<string, any>,
   U extends Record<string, any>,
 >(target: U, meta: Class<T, [U]> & { key: symbol }, inherit = true): T {
-  let data: T = Reflect.getOwnMetadata(meta.key, target);
+  // SAFETY: Reflect.getOwnMetadata returns any; meta.key is the metadata class's own key, so it holds an instance of that class, stored by this function or by another copy of it, or nothing.
+  let data = Reflect.getOwnMetadata(meta.key, target) as T | undefined;
   if (!data) {
     data = new meta(target);
-    const proto = Object.getPrototypeOf(target);
+    // SAFETY: Object.getPrototypeOf returns any; the recursion below walks the prototype chain with the same metadata class, which accepts a target's prototype in place of the target.
+    const proto = Object.getPrototypeOf(target) as U | null;
     if (inherit && proto) {
       const parent = GetMetadata(proto, meta, true);
       if (hasInherit(data)) {

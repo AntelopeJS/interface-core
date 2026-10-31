@@ -115,12 +115,14 @@ function readBrand(
 }
 
 /** Returns whether a value implements this runtime's stable proxy protocol. */
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- the brand probe is documented to answer false for any non-proxy value (docs/2.proxies.md), so its parameter is the caller's untyped value; no named type narrows it without breaking callers that hold unknown.
 export function IsInterfaceProxy(value: unknown, kind?: ProxyKind): boolean {
   const brand = readBrand(value);
   return Boolean(brand && (!kind || brand.kind === kind));
 }
 
 /** Returns the identity a proxy was declared with, for diagnostics. */
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- the brand probe is documented to answer undefined for any non-proxy value (docs/2.proxies.md), so its parameter is the caller's untyped value; no named type narrows it without breaking callers that hold unknown.
 export function GetInterfaceProxyIdentity(value: unknown): string | undefined {
   return readBrand(value)?.identity;
 }
@@ -271,7 +273,11 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
   private invoke(attachment: Attachment<T>, args: Parameters<T>): Promise<R> {
     try {
       return Promise.resolve(
-        runAttachment(attachment, (callback) => callback(...args)),
+        runAttachment(
+          attachment,
+          // SAFETY: T extends Func types the call as any; the proxy's contract declares the result of a provider callback typed T to be R, or a promise of R.
+          (callback) => callback(...args) as R | PromiseLike<R>,
+        ),
       );
     } catch (error) {
       return Promise.reject(error);

@@ -110,12 +110,15 @@ describe("ImplementInterface validation", () => {
 
   it("awaits thenables and promises created in another realm", async () => {
     const proxy = new AsyncProxy<() => string>("test.cross-realm-promise");
-    const declaration: PromiseLike<{ proxy: AsyncProxy<() => string> }> =
-      runInNewContext("Promise.resolve(value)", { value: { proxy } });
-    const implementation: PromiseLike<{ proxy: () => string }> =
-      runInNewContext("({ then(resolve) { resolve(value); } })", {
-        value: { proxy: () => "resolved" },
-      });
+    // SAFETY: runInNewContext returns any; the script returns Promise.resolve of the { proxy } object passed in as value.
+    const declaration = runInNewContext("Promise.resolve(value)", {
+      value: { proxy },
+    }) as PromiseLike<{ proxy: AsyncProxy<() => string> }>;
+    // SAFETY: runInNewContext returns any; the script evaluates to a thenable that resolves to the { proxy } object passed in as value.
+    const implementation = runInNewContext(
+      "({ then(resolve) { resolve(value); } })",
+      { value: { proxy: () => "resolved" } },
+    ) as PromiseLike<{ proxy: () => string }>;
 
     await ImplementInterface(declaration, implementation);
     expect(await proxy.call()).to.equal("resolved");
