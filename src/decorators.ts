@@ -136,13 +136,14 @@ function Decorator3<F extends Func[], T extends any[], R = void>(
  * This allows for creating custom, parameterized class decorators with type safety.
  *
  * @template T - Array type representing factory parameters
+ * @template C - The classes the decorator applies to; the handler receives one of them
  * @param handler - Decorator callback function that receives the target class and factory parameters
  * @returns Decorator factory function that accepts parameters and returns a class decorator
  */
-export function MakeClassDecorator<T extends any[]>(
-  handler: Function1<[ClassDecorator], T, any>,
+export function MakeClassDecorator<T extends any[], C extends Class = Class>(
+  handler: Function1<[ClassDecorator<C>], T, any>,
 ) {
-  return Decorator1<[ClassDecorator], T, any>(handler);
+  return Decorator1<[ClassDecorator<C>], T, any>(handler);
 }
 
 /**
