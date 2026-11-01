@@ -50,7 +50,7 @@ export namespace Logging {
      *
      * @param args - Values to log, which can be of any type and will be serialized appropriately
      */
-    public Error(...args: any[]): void {
+    public Error(...args: unknown[]): void {
       emit(Level.ERROR, this.channel, args);
     }
 
@@ -62,7 +62,7 @@ export namespace Logging {
      *
      * @param args - Values to log, which can be of any type and will be serialized appropriately
      */
-    public Warn(...args: any[]): void {
+    public Warn(...args: unknown[]): void {
       emit(Level.WARN, this.channel, args);
     }
 
@@ -74,7 +74,7 @@ export namespace Logging {
      *
      * @param args - Values to log, which can be of any type and will be serialized appropriately
      */
-    public Info(...args: any[]): void {
+    public Info(...args: unknown[]): void {
       emit(Level.INFO, this.channel, args);
     }
 
@@ -85,7 +85,7 @@ export namespace Logging {
      *
      * @param args - Values to log, which can be of any type and will be serialized appropriately
      */
-    public Debug(...args: any[]): void {
+    public Debug(...args: unknown[]): void {
       emit(Level.DEBUG, this.channel, args);
     }
 
@@ -97,7 +97,7 @@ export namespace Logging {
      *
      * @param args - Values to log, which can be of any type and will be serialized appropriately
      */
-    public Trace(...args: any[]): void {
+    public Trace(...args: unknown[]): void {
       emit(Level.TRACE, this.channel, args);
     }
 
@@ -109,7 +109,7 @@ export namespace Logging {
      * @param levelId - Severity level of the log entry (use values from the Level enum)
      * @param args - Values to log, which can be of any type and will be serialized appropriately
      */
-    public Write(levelId: number, ...args: any[]): void {
+    public Write(levelId: number, ...args: unknown[]): void {
       emit(levelId, this.channel, args);
     }
   }
@@ -177,7 +177,7 @@ export namespace Logging {
   export function Write(
     levelId: number,
     channel: string,
-    ...args: any[]
+    ...args: unknown[]
   ): void {
     emit(levelId, channel, args);
   }

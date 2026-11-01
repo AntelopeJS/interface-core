@@ -17,7 +17,7 @@ export interface Log {
   levelId: number;
 
   /** The actual content of the log entry, can be any serializable values */
-  args: any[];
+  args: unknown[];
 }
 
 /**
