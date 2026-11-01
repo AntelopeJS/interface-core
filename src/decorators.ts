@@ -12,7 +12,9 @@ export type Func<A extends any[] = any[], R = any> = (...args: A) => R;
  * @template T - Type of the instance created by the constructor
  * @template A - Array type representing constructor parameters
  */
-export type Class<T = any, A extends any[] = any[]> = { new (...args: A): T };
+export type Class<T = object, A extends any[] = any[]> = {
+  new (...args: A): T;
+};
 
 /**
  * Represents a class decorator that can be applied to a class constructor.
@@ -22,15 +24,24 @@ export type Class<T = any, A extends any[] = any[]> = { new (...args: A): T };
 export type ClassDecorator<C = Class> = (t: C) => any;
 
 /**
+ * What a member or parameter decorator receives as its target: the class
+ * prototype for an instance member, the class itself for a static member or a
+ * constructor parameter. Either way, `constructor` is the function that built it.
+ */
+export interface DecoratorTarget {
+  readonly constructor: Function;
+}
+
+/**
  * Represents a property decorator that can be applied to class properties.
  */
-export type PropertyDecorator = (t: any, key: PropertyKey) => void;
+export type PropertyDecorator = (t: DecoratorTarget, key: PropertyKey) => void;
 
 /**
  * Represents a method decorator that can be applied to class methods or accessors.
  */
 export type MethodDecorator = (
-  t: any,
+  t: DecoratorTarget,
   key: PropertyKey,
   descriptor: PropertyDescriptor,
 ) => void;
@@ -39,7 +50,7 @@ export type MethodDecorator = (
  * Represents a parameter decorator that can be applied to method parameters.
  */
 export type ParameterDecorator = (
-  t: any,
+  t: DecoratorTarget,
   key: PropertyKey,
   index: number,
 ) => void;
@@ -125,13 +136,14 @@ function Decorator3<F extends Func[], T extends any[], R = void>(
  * This allows for creating custom, parameterized class decorators with type safety.
  *
  * @template T - Array type representing factory parameters
+ * @template C - The classes the decorator applies to; the handler receives one of them
  * @param handler - Decorator callback function that receives the target class and factory parameters
  * @returns Decorator factory function that accepts parameters and returns a class decorator
  */
-export function MakeClassDecorator<T extends any[]>(
-  handler: Function1<[ClassDecorator], T, any>,
+export function MakeClassDecorator<T extends any[], C extends Class = Class>(
+  handler: Function1<[ClassDecorator<C>], T, any>,
 ) {
-  return Decorator1<[ClassDecorator], T, any>(handler);
+  return Decorator1<[ClassDecorator<C>], T, any>(handler);
 }
 
 /**
