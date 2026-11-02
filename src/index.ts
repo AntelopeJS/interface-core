@@ -96,7 +96,12 @@ type InterfaceImplType<T> =
             ? InterfaceToImpl<T>
             : never;
 
-type InterfaceToImpl<T> = T extends infer P
+/**
+ * The implementation an interface declaration `T` accepts: each member optional,
+ * an async proxy implemented by its function, a registering proxy by its
+ * `register` and `unregister` callbacks, and an event proxy by nothing.
+ */
+export type InterfaceToImpl<T> = T extends infer P
   ? {
       [K in keyof P]?: InterfaceImplType<P[K]>;
     }
@@ -293,7 +298,7 @@ function isThenable(value: Unparsed): value is PromiseLike<unknown> {
  * @throws {TypeError} For malformed arguments, object cycles, or missing handlers.
  */
 export function ImplementInterface<
-  T extends Record<string, unknown>,
+  T extends object,
   T2 extends InterfaceToImpl<T>,
 >(declaration: T, implementation: T2): { declaration: T; implementation: T2 };
 
@@ -301,7 +306,7 @@ export function ImplementInterface<
  * @deprecated Please use the non-async version of this function.
  */
 export function ImplementInterface<
-  T extends Record<string, unknown>,
+  T extends object,
   T2 extends InterfaceToImpl<T>,
 >(
   declaration: T | PromiseLike<T>,
