@@ -20,6 +20,7 @@ describe("global runtime protocol", () => {
     const temporary = mkdtempSync(join(process.cwd(), ".interface-core-copy-"));
     copyPath = join(temporary, "dist");
     cpSync(join(__dirname, ".."), copyPath, { recursive: true });
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- require returns any; the module is a byte copy of this package's own dist, loaded by path so the copy stays apart from the local one
     const foreign: typeof import("..") = require(join(copyPath, "index.js"));
     const localProxy = new AsyncProxy<() => string>("test.cross-copy");
     const foreignProxy = new foreign.AsyncProxy("test.cross-copy");

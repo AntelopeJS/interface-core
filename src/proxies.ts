@@ -269,6 +269,7 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
   private invoke(attachment: Attachment<T>, args: Parameters<T>): Promise<R> {
     try {
       return Promise.resolve(
+        // oxlint-disable-next-line typescript/no-unsafe-return -- T extends Func calls return any and R is an independent type parameter of the published class, so the call result cannot be typed R without asserting it
         runAttachment(attachment, (callback) => callback(...args)),
       );
     } catch (error) {

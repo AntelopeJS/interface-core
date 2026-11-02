@@ -59,11 +59,14 @@ export function GetMetadata<
   T extends Record<string, any>,
   U extends Record<string, any>,
 >(target: U, meta: Class<T, [U]> & { key: symbol }, inherit = true): T {
+  // oxlint-disable-next-line typescript/no-unsafe-assignment -- Reflect.getOwnMetadata returns reflect-metadata's any; the stored instance may come from another module copy of the metadata class sharing the Symbol.for key, so instanceof cannot verify it and a typed local would only assert it
   let data: T = Reflect.getOwnMetadata(meta.key, target);
   if (!data) {
     data = new meta(target);
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- Object.getPrototypeOf returns the lib's any; the recursion below needs the prototype as U, which a prototype is not, and an unknown local plus a guard cannot produce a U
     const proto = Object.getPrototypeOf(target);
     if (inherit && proto) {
+      // oxlint-disable-next-line typescript/no-unsafe-argument -- proto is the any of Object.getPrototypeOf passed as the U of the recursive GetMetadata call; tsc rejects an object-narrowed prototype for U
       const parent = GetMetadata(proto, meta, true);
       if (hasInherit(data)) {
         data.inherit(parent);
