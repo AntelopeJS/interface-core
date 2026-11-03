@@ -154,7 +154,8 @@ void a; void b; void c; void d; void e; void f; void g; void h;
 const moduleInfoOk = (dist: string) => `import type { ModuleInfo, ModuleDefinition } from "${dist}/modules";
 const full: ModuleInfo = { source: { type: "x" }, config: 1, importOverrides: {}, disabledExports: [], status: "active", localPath: "/p" };
 const def: ModuleDefinition = { source: { type: "x" } };
-void full; void def;
+const states: ModuleInfo["status"][] = ["loaded", "constructed", "active", "unknown"];
+void states; void full; void def;
 `;
 
 const moduleInfoBad = (dist: string) => `import type { ModuleInfo } from "${dist}/modules";
