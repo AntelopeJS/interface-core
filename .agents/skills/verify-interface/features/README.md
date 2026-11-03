@@ -14,3 +14,5 @@ One file per feature. `covers:` lists the source globs it owns, `docs:` the page
 | [config](config.md) | Types a project configuration. | define-config, config-types |
 | [runtime](runtime.md) | Reads the runtime mode and registers dev servers. | runtime |
 | [smoke](smoke.md) | The fixed journeys every verdict runs. | exports, proxy-lifecycle, implement-interface |
+
+The synced `SKILL.md` says the smoke feature runs `every-function`. Here it does not: smoke runs `exports`, `proxy-lifecycle` and `implement-interface`, because this package declares no interface functions to walk (see the Gotchas of [smoke](smoke.md)). The synced text is pack-owned and `sync` rewrites it, so this note is the repository-owned correction.

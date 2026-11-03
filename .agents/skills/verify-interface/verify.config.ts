@@ -146,6 +146,9 @@ const config: VerifyConfig = {
   },
   journeys: {
     "proxy-lifecycle": scenario("proxy-lifecycle", "proxies queue, attach, detach by lease, emit and replay as docs/2.proxies.md states", "docs/2.proxies.md"),
+    "proxy-details": scenario("proxy-details", "detach forms, sibling callbacks, event context, re-registration, identities and owner cleanup behave as docs/2.proxies.md states", "docs/2.proxies.md"),
+    "ownership-details": scenario("ownership-details", "generations, destroyed contexts and forwarded registrations behave as docs/2.proxies.md and docs/5.modules.md state", "docs/2.proxies.md"),
+    "metadata-details": scenario("metadata-details", "GetMetadata walks the whole chain, hands the target to the constructor and ignores a later inherit flag as docs/4.metadata.md states", "docs/4.metadata.md"),
     "implement-interface": scenario("implement", "ImplementInterface validates first, attaches all or none, and the lookups answer as docs/2.proxies.md states", "docs/2.proxies.md"),
     "implement-types": compiled("InterfaceToImpl types each member as docs/2.proxies.md states", "docs/2.proxies.md", implOk),
     "implement-types-reject": compiled("a synchronous proxy takes no async implementation", "docs/2.proxies.md", implBad, ["TS2769"]),

@@ -8,6 +8,7 @@ docs:
 journeys:
   - module-lifecycle
   - module-types
+  - ownership-details
 ---
 
 # Modules
@@ -18,6 +19,7 @@ journeys:
 
 - `module-lifecycle`: the six events and their arguments; `ModuleDestroyed` outside a context cleans the owner named like the module and inside one cleans that generation only; a destroyed owner invalidates its context (`ERR_MODULE_CONTEXT_INVALIDATED`) and a queued call of a destroyed caller rejects the same way; a callback attached in an interface-kind context runs in the caller's context, any other in the provider's; a manually detached callback outlives its generation and fails reading the context; the ten management and declaration functions reject with `ERR_NO_PROVIDER` in stub mode.
 - `module-types`: `ModuleDefinitionSource` refuses unknown fields, `ModuleSourceLocal` its sibling kinds, `importOverrides` of `AntelopeModuleConfig` the array record shape, and `ModuleInfo.status` an unlisted state.
+- `ownership-details`: as in [proxies](proxies.md), the half that concerns `ModuleDestroyed` and the module context.
 
 ## How to get to it (user POV)
 
