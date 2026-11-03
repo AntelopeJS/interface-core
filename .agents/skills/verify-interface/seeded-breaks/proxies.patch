@@ -1,0 +1,13 @@
+diff --git a/src/proxies.ts b/src/proxies.ts
+index 0e7a011..4a595f9 100644
+--- a/src/proxies.ts
++++ b/src/proxies.ts
+@@ -253,7 +253,7 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
+     if (internal.testStubMode) {
+       return Promise.reject(new MissingProviderError());
+     }
+-    if (this.queue.length >= internal.maxPendingOperations) {
++    if (this.queue.length > internal.maxPendingOperations) {
+       return Promise.reject(
+         new ProviderQueueFullError(
+           this[PROXY_BRAND].identity,

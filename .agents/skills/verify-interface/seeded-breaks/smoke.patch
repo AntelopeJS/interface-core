@@ -1,0 +1,13 @@
+diff --git a/src/proxies.ts b/src/proxies.ts
+index 0e7a011..2eaf2e0 100644
+--- a/src/proxies.ts
++++ b/src/proxies.ts
+@@ -234,7 +234,7 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
+ 
+   /** Detaches the leased attachment, or the current one when called without a lease. */
+   public detach(lease?: AttachmentLease) {
+-    if (!lease || matchesLease(this.attachment, lease)) {
++    if (!lease || this.attachment) {
+       this.attachment = undefined;
+     }
+   }
