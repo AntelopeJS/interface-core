@@ -5,6 +5,7 @@ docs:
   - docs/6.logging.md
 journeys:
   - logging
+  - surface-details
 ---
 
 # Logging
@@ -14,6 +15,7 @@ journeys:
 ## Sub-features
 
 - `logging`: level values; the five main-channel functions and the same five on a `Logging.Channel`, plus both `Write` forms; the entry shape `{ time, channel, levelId, args }` with arguments passed unchanged; the default export equals the named one; a listener sees only later events and stops after `unregister`; the listener runs before the logging call returns.
+- `surface-details`: object and array arguments reach a listener as the identical references, with `Logging.Info()` giving an empty `args`, on the main channel, a named channel and `Write`; `Logging.Channel` has exactly Error, Warn, Info, Debug, Trace and Write; the `Logging` namespace exports exactly those functions plus `Channel` and `Level`.
 
 ## How to get to it (user POV)
 
@@ -28,3 +30,4 @@ pnpm exec antelopejs-verify journey "$RUN" logging
 ## Gotchas
 
 - Not driven: the recursion hazard of logging inside a listener (it never ends by design) and the runtime's filters and formatters, which the core owns.
+- Sentence sweep of docs/6.logging.md and the TSDoc of `src/logging/**`: driven by `logging` and `surface-details`, except: the advice to log identifiers and not credentials (guidance, no behaviour: the interface redacts nothing, which the identical-reference check pins); the runtime's filters, formatters and `NO_PREFIX` display (core); the recursion hazard (never ends by design); the `docs-check` snippet.

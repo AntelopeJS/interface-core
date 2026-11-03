@@ -125,6 +125,47 @@ declare const target: DecoratorTarget;
 new target.constructor();
 `;
 
+const config7Ok = (dist: string) => `import type { AntelopeTestConfig, AntelopeConfig, AntelopeLogging, ConfigContext, ImportOverride, ModuleSourcePackage, ModuleSourceGit } from "${dist}/config";
+const a: AntelopeTestConfig = { setup: () => ({ name: "x" }) };
+const b: AntelopeTestConfig = { setup: async () => ({ name: "x" }) };
+const c: AntelopeTestConfig = { setup: () => undefined, cleanup: async () => {}, folder: "t" };
+const d: AntelopeTestConfig = { cleanup: () => {} };
+const e: ConfigContext = { env: "prod" };
+const f: ImportOverride = { interface: "i" };
+const g: ModuleSourcePackage = { type: "package", package: "p", version: "1" };
+const h: ModuleSourceGit = { type: "git", remote: "r", commit: "c" };
+const i: AntelopeLogging = {};
+const j: AntelopeConfig = { name: "n", environments: { dev: { logging: { enabled: false } } } };
+void a; void b; void c; void d; void e; void f; void g; void h; void i; void j;
+`;
+
+const config7Bad = (dist: string) => `import type { AntelopeTestConfig, AntelopeConfig, ModuleSourcePackage, ModuleSourceGit, ModuleSourceLocal, ImportOverride, ConfigVars } from "${dist}/config";
+const a: AntelopeTestConfig = { setup: () => 5 };
+const b: AntelopeConfig = { modules: {} };
+const c: ModuleSourcePackage = { type: "package", package: "p" };
+const d: ModuleSourceGit = { type: "git", remote: "r", path: "p" };
+const e: ModuleSourceLocal = { type: "local", path: "p", commit: "c" };
+const f: ImportOverride = { source: "s" };
+const g: ConfigVars = { A: [1] };
+const h: AntelopeConfig = { name: "n", envOverrides: { A: 5 } };
+void a; void b; void c; void d; void e; void f; void g; void h;
+`;
+
+const moduleInfoOk = (dist: string) => `import type { ModuleInfo, ModuleDefinition } from "${dist}/modules";
+const full: ModuleInfo = { source: { type: "x" }, config: 1, importOverrides: {}, disabledExports: [], status: "active", localPath: "/p" };
+const def: ModuleDefinition = { source: { type: "x" } };
+void full; void def;
+`;
+
+const moduleInfoBad = (dist: string) => `import type { ModuleInfo } from "${dist}/modules";
+const noConfig: ModuleInfo = { source: { type: "x" }, importOverrides: {}, disabledExports: [], status: "active", localPath: "/p" };
+const noOverrides: ModuleInfo = { source: { type: "x" }, config: 1, disabledExports: [], status: "active", localPath: "/p" };
+const noExports: ModuleInfo = { source: { type: "x" }, config: 1, importOverrides: {}, status: "active", localPath: "/p" };
+const noPath: ModuleInfo = { source: { type: "x" }, config: 1, importOverrides: {}, disabledExports: [], status: "active" };
+const noStatus: ModuleInfo = { source: { type: "x" }, config: 1, importOverrides: {}, disabledExports: [], localPath: "/p" };
+void noConfig; void noOverrides; void noExports; void noPath; void noStatus;
+`;
+
 const config: VerifyConfig = {
   doors: {
     data: null,
@@ -149,6 +190,11 @@ const config: VerifyConfig = {
     "proxy-details": scenario("proxy-details", "detach forms, sibling callbacks, event context, re-registration, identities and owner cleanup behave as docs/2.proxies.md states", "docs/2.proxies.md"),
     "ownership-details": scenario("ownership-details", "generations, destroyed contexts and forwarded registrations behave as docs/2.proxies.md and docs/5.modules.md state", "docs/2.proxies.md"),
     "metadata-details": scenario("metadata-details", "GetMetadata walks the whole chain, hands the target to the constructor and ignores a later inherit flag as docs/4.metadata.md states", "docs/4.metadata.md"),
+    "surface-details": scenario("surface-details", "combined decorator factories, nested validation, log references, rejected provider throws, replaced callbacks, emit continuing and event arity behave as docs/2, 3, 5, 6 and the README state", "docs/3.decorators.md"),
+    "config-test-types": compiled("AntelopeTestConfig, ImportOverride and the source kinds accept the documented shapes", "docs/7.configuration.md", config7Ok),
+    "config-reject-types": compiled("the configuration types refuse what docs/7.configuration.md refuses", "docs/7.configuration.md", config7Bad, ["TS2322", "TS2322", "TS2322", "TS2353", "TS2353", "TS2741", "TS2741", "TS2741"]),
+    "module-info-types": compiled("ModuleInfo and ModuleDefinition accept the documented shapes", "docs/5.modules.md", moduleInfoOk),
+    "module-info-reject": compiled("ModuleInfo requires every ModuleDefinition field, status and localPath", "docs/5.modules.md", moduleInfoBad, ["TS2322", "TS2322", "TS2322", "TS2322", "TS2322"]),
     "implement-interface": scenario("implement", "ImplementInterface validates first, attaches all or none, and the lookups answer as docs/2.proxies.md states", "docs/2.proxies.md"),
     "implement-types": compiled("InterfaceToImpl types each member as docs/2.proxies.md states", "docs/2.proxies.md", implOk),
     "implement-types-reject": compiled("a synchronous proxy takes no async implementation", "docs/2.proxies.md", implBad, ["TS2769"]),

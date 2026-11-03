@@ -8,6 +8,7 @@ journeys:
   - implement-interface
   - implement-types
   - implement-types-reject
+  - surface-details
 ---
 
 # Implement
@@ -19,6 +20,7 @@ A provider module calls `ImplementInterface(declaration, implementation)`. Valid
 - `implement-interface`: the synchronous overload returns `{ declaration, implementation }` and nested objects, async functions and registering pairs attach; an event proxy needs no implementation; a missing function, a missing `unregister`, a null or numeric argument, a cycle on either side and an `Object.prototype` name without an own value each throw `TypeError`; an implementation missing one of two handlers attaches neither; the deprecated promise overload resolves; the lookups return `[]` and `undefined` outside a module and the module's connections inside one; `GetResponsibleModule` and `RunWithResponsibleModule` report the active module.
 - `implement-types`: `InterfaceToImpl` keys are optional, an event is `never`, a registering proxy takes `{ register, unregister }`, a nested object recurses.
 - `implement-types-reject`: a synchronous `AsyncProxy<() => number>` takes no `async` function.
+- `surface-details`: a nested declaration with no implementation, or with `5` where an object belongs, throws `TypeError`; the same declaration with its handler attaches; a provider that throws synchronously makes the call reject, also through `InterfaceFunction`, and an async rejection passes through; an interface function with a synchronous provider still returns a promise (README, docs/1 and docs/2).
 
 ## How to get to it (user POV)
 
@@ -34,3 +36,4 @@ pnpm exec antelopejs-verify journey "$RUN" implement
 
 - Rollback when attaching throws partway (replay failure with a rethrowing reporter) is the covered behaviour of the `formal-implement-interface` check, which `antelopejs-verify formal` runs; this feature drives the validation half.
 - Not driven: connections the core builds from `importOverrides` (the core owns them; the journey writes `internal.interfaceConnections` directly).
+- Sentence sweep of the README, docs/1.introduction.md and the TSDoc of `src/index.ts`: driven by `implement-interface`, `implement-types`, `implement-types-reject`, `metadata`, `metadata-details` and `exports`, except these rows. Not driven: the role table and next-step links of docs/1 (navigation); the 1,000-call default is driven in `proxy-lifecycle`; the README install and contributing commands; the badge links; `docs-check` snippets.
