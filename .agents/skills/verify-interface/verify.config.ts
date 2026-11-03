@@ -167,6 +167,38 @@ const noStatus: ModuleInfo = { source: { type: "x" }, config: 1, importOverrides
 void noConfig; void noOverrides; void noExports; void noPath; void noStatus;
 `;
 
+const proxyTypesOk = (dist: string) => `import type { AttachmentLease } from "${dist}/proxies";
+import { AsyncProxy } from "${dist}/index";
+const lease: AttachmentLease = { owner: "o", generation: 1 };
+const issued: AttachmentLease = new AsyncProxy<() => void>().onCall(() => {});
+void lease; void issued;
+`;
+
+const proxyTypesBad = (dist: string) => `import { IsInterfaceProxy } from "${dist}/index";
+import type { AttachmentLease } from "${dist}/index";
+declare const x: unknown;
+declare const lease: AttachmentLease;
+if (IsInterfaceProxy(x)) {
+  x.anything;
+}
+void lease;
+`;
+
+const runtimeTypesOk = (dist: string) => `import type { DevServerRegistry, DevServerEntry, DevServerEndpoint, RuntimeInfo } from "${dist}/runtime";
+const endpoint: DevServerEndpoint = { protocol: "http", host: "localhost", port: 5011 };
+const entry: DevServerEntry = { endpoints: [endpoint] };
+const registry: DevServerRegistry = { pid: 1, startedAt: "2026-06-12T10:00:00Z", servers: { api: entry } };
+const info: RuntimeInfo = { dev: true, projectPath: "/p", env: "default" };
+void registry; void info;
+`;
+
+const runtimeTypesBad = (dist: string) => `import type { DevServerRegistry, DevServerEndpoint, RuntimeInfo } from "${dist}/runtime";
+const noPid: DevServerRegistry = { startedAt: "x", servers: {} };
+const portText: DevServerEndpoint = { protocol: "http", host: "h", port: "5011" };
+const noEnv: RuntimeInfo = { dev: true, projectPath: "/p" };
+void noPid; void portText; void noEnv;
+`;
+
 const config: VerifyConfig = {
   doors: {
     data: null,
@@ -196,6 +228,11 @@ const config: VerifyConfig = {
     "config-reject-types": compiled("the configuration types refuse what docs/7.configuration.md refuses", "docs/7.configuration.md", config7Bad, ["TS2322", "TS2322", "TS2322", "TS2353", "TS2353", "TS2741", "TS2741", "TS2741"]),
     "module-info-types": compiled("ModuleInfo and ModuleDefinition accept the documented shapes", "docs/5.modules.md", moduleInfoOk),
     "module-info-reject": compiled("ModuleInfo requires every ModuleDefinition field, status and localPath", "docs/5.modules.md", moduleInfoBad, ["TS2322", "TS2322", "TS2322", "TS2322", "TS2322"]),
+    "rule-details": scenario("round4-details", "re-registration, queue and replay order, onUnregister sibling choice, callback contexts, a second copy of the package and subpath identity behave as docs/2.proxies.md states", "docs/2.proxies.md"),
+    "proxy-types": compiled("AttachmentLease imports from the proxies subpath and onCall returns one", "docs/2.proxies.md", proxyTypesOk),
+    "proxy-types-reject": compiled("IsInterfaceProxy does not narrow and the root does not re-export AttachmentLease", "docs/2.proxies.md", proxyTypesBad, ["TS18046", "TS2305"]),
+    "runtime-types": compiled("the dev registry types accept the documented shapes", "docs/8.runtime.md", runtimeTypesOk),
+    "runtime-types-reject": compiled("the dev registry types refuse a missing pid, a text port and a missing env", "docs/8.runtime.md", runtimeTypesBad, ["TS2322", "TS2741", "TS2741"]),
     "implement-interface": scenario("implement", "ImplementInterface validates first, attaches all or none, and the lookups answer as docs/2.proxies.md states", "docs/2.proxies.md"),
     "implement-types": compiled("InterfaceToImpl types each member as docs/2.proxies.md states", "docs/2.proxies.md", implOk),
     "implement-types-reject": compiled("a synchronous proxy takes no async implementation", "docs/2.proxies.md", implBad, ["TS2769"]),

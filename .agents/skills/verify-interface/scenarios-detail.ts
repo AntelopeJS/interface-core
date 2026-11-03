@@ -282,8 +282,28 @@ const rp = c.GetMetadata(R1.prototype, Plain); rp.own = "parent"; rp.extra = "e"
 const rc = c.GetMetadata(R2.prototype, Plain);
 out.defaultCopy = [rc.own, rc.extra, rc.arr, rc.arr === rp.arr];
 out.storedOnTarget = Reflect.getOwnMetadata(Plain.key, R2.prototype) === rc;
+const proto = {};
+class H { constructor() { this.own = 1; } }
+H.key = Symbol("H");
+class H1 {} class H2 extends H1 {}
+const hp = c.GetMetadata(H1.prototype, H);
+Object.defineProperty(hp, "hidden", { value: 1, enumerable: false, writable: true, configurable: true });
+const hc = c.GetMetadata(H2.prototype, H);
+out.copiesNonEnumerable = [Object.hasOwn(hc, "hidden"), hc.hidden];
+class N { constructor() { this.own = 1; } inherit() {} }
+N.key = Symbol("N");
+class N1 {} class N2 extends N1 {}
+c.GetMetadata(N1.prototype, N).extra = 5;
+out.inheritMethodReplacesCopy = Object.hasOwn(c.GetMetadata(N2.prototype, N), "extra");
+class F1 {} class F2 extends F1 {}
+c.GetMetadata(F2.prototype, H, false);
+out.noInheritCreatesNothingOnParent = [Reflect.hasOwnMetadata(H.key, F1.prototype)];
+class S1 {} class S2 extends S1 {}
+const shared = { list: [1] };
+c.GetMetadata(S1.prototype, H).shared = shared;
+out.copyIsShallow = c.GetMetadata(S2.prototype, H).shared === shared;
 console.log(JSON.stringify(out));
 `,
-    expected: String.raw`{"chain":["root"],"parentsCreated":[true,true,true],"constructorArgument":[true,2],"ctorVsPrototype":true,"createdWithoutInherit":[],"laterTrueDoesNotRebuild":[true,[]],"laterFalseKeepsInherited":[true,["q"]],"defaultCopy":["child","e",[],false],"storedOnTarget":true}`,
+    expected: String.raw`{"chain":["root"],"parentsCreated":[true,true,true],"constructorArgument":[true,2],"ctorVsPrototype":true,"createdWithoutInherit":[],"laterTrueDoesNotRebuild":[true,[]],"laterFalseKeepsInherited":[true,["q"]],"defaultCopy":["child","e",[],false],"storedOnTarget":true,"copiesNonEnumerable":[true,1],"inheritMethodReplacesCopy":false,"noInheritCreatesNothingOnParent":[false],"copyIsShallow":true}`,
   },
 } satisfies { [name: string]: { script: string; expected: string } };

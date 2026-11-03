@@ -1,0 +1,120 @@
+/** Scenario script for the rule details of docs/2 and docs/4: re-registration, queue and replay order, onUnregister sibling choice, callback contexts, a second copy of the package and subpath identity. */
+export const RULE_SCENARIOS = {
+  "round4-details": {
+    script: String.raw`const dist = process.argv[2];
+const fs = require("node:fs");
+const path = require("node:path");
+const c = require(dist + "/index.js");
+const m = require(dist + "/modules.js");
+const px = require(dist + "/proxies.js");
+const { internal } = require(dist + "/internal.js");
+const out = {};
+const run = (ctx, f) => m.RunWithModuleContext(ctx, f);
+const destroy = (id) => m.Events.ModuleDestroyed.emit(id);
+(async () => {
+  const re = new c.RegisteringProxy();
+  const relog = [];
+  re.onHandlers((id, v) => relog.push("r:" + id + v), (id) => relog.push("u:" + id));
+  await run({ module: "A" }, async () => re.register("k", 1));
+  await run({ module: "B" }, async () => re.register("k", 2));
+  destroy("A");
+  const afterA = relog.splice(0);
+  destroy("B");
+  out.reregisterReplacesOwner = [afterA, relog];
+  const pm = new c.RegisteringProxy();
+  const fifo = [];
+  pm.register("first", 1); pm.register("second", 2); pm.register("third", 3);
+  pm.onHandlers((id) => fifo.push(id), () => {});
+  out.registrationReplayOrder = fifo;
+  const q = new c.AsyncProxy();
+  const order = [], settled = [];
+  const calls = [1, 2, 3].map((n) => q.call(n).then((v) => settled.push(v)));
+  q.onCall((n) => { order.push(n); return n; });
+  await Promise.all(calls);
+  out.queueIsFifo = [order, settled];
+  const spy = [];
+  const early = new c.RegisteringProxy();
+  early.register("a", 1);
+  early.onHandlers((id) => early.unregister(id), (id) => spy.push("u:" + id));
+  out.unregisterInPlaceDuringReplay = spy;
+  const rg = new c.RegisteringProxy();
+  const ul = [];
+  await run({ module: "A6", owner: "A6" }, async () => {
+    rg.onUnregister((id) => ul.push("u0:" + id));
+    rg.onRegister((id) => ul.push("r:" + id), true);
+    rg.onUnregister((id) => ul.push("u1:" + id));
+  });
+  destroy("A6");
+  rg.register("x"); rg.unregister("x");
+  out.onUnregisterChecksUnregisterFirst = ul;
+  const lone = new c.RegisteringProxy();
+  const ll = [];
+  await run({ module: "P" }, async () => lone.onRegister(() => {}, true));
+  await run({ module: "Q" }, async () => lone.onUnregister((id) => ll.push("u:" + id)));
+  destroy("Q");
+  lone.register("z"); lone.unregister("z");
+  out.onUnregisterOtherOwnerIsAuto = ll;
+  const ctxs = new c.RegisteringProxy();
+  const cl = [];
+  await run({ module: "prov" }, async () => ctxs.onHandlers((id) => cl.push("r@" + c.GetResponsibleModule() + ":" + id), (id) => cl.push("u@" + c.GetResponsibleModule() + ":" + id)));
+  await run({ module: "reg" }, async () => ctxs.register("e"));
+  destroy("reg");
+  out.callbackContexts = cl;
+  const manual = new c.RegisteringProxy();
+  const ml = [];
+  await run({ module: "mm", owner: "mm" }, async () => manual.onRegister((id) => ml.push("r:" + id), true));
+  const auto = new c.RegisteringProxy();
+  await run({ module: "aa", owner: "aa" }, async () => auto.onRegister((id) => ml.push("a:" + id)));
+  destroy("mm"); destroy("aa");
+  manual.register("1"); auto.register("2");
+  out.onRegisterManualDetach = ml;
+  const afterDestroyed = new c.AsyncProxy();
+  let inner = [];
+  await run({ module: "late", owner: "late#1" }, async () => afterDestroyed.onCall(() => {
+    const reg = new c.RegisteringProxy();
+    try { reg.register("x"); inner.push("registered"); } catch (e) { inner.push(e.code); }
+    try { c.GetResponsibleModule(); inner.push("read"); } catch (e) { inner.push(e.code); }
+  }, true));
+  await run({ module: "late", owner: "late#1" }, async () => destroy("late"));
+  await afterDestroyed.call();
+  out.destroyedGenerationCallback = inner;
+  const defaults = new c.RegisteringProxy();
+  const dl = [];
+  defaults.onHandlers((id) => dl.push("r:" + id), (id) => dl.push("u:" + id));
+  defaults.register("outside");
+  destroy("anything"); m.ReleaseOwner("someone");
+  out.outsideContextRegistrationSurvives = dl.slice();
+  const fnArg = new c.AsyncProxy();
+  await run({ module: "P" }, async () => fnArg.onCall((fn) => fn()));
+  out.functionArgumentContext = await run({ module: "C" }, () => fnArg.call(() => c.GetResponsibleModule() ?? "none"));
+  const copyRoot = path.join(__dirname, "copy-of-dist");
+  fs.rmSync(copyRoot, { recursive: true, force: true });
+  fs.mkdirSync(copyRoot, { recursive: true });
+  fs.cpSync(dist, path.join(copyRoot, "dist"), { recursive: true });
+  fs.symlinkSync(path.join(dist, "..", "node_modules"), path.join(copyRoot, "node_modules"), "dir");
+  const other = require(path.join(copyRoot, "dist", "index.js"));
+  const proxyA = new c.AsyncProxy("x");
+  const proxyB = new other.AsyncProxy("y");
+  const decl = { F: c.InterfaceFunction("f") };
+  other.ImplementInterface(decl, { F: () => "attached by the other copy" });
+  const declB = { G: other.InterfaceFunction("g") };
+  c.ImplementInterface(declB, { G: () => "attached by this copy" });
+  out.twoCopies = [other !== c, other.IsInterfaceProxy(proxyA, "async"), other.GetInterfaceProxyIdentity(proxyA), c.IsInterfaceProxy(proxyB, "async"), c.GetInterfaceProxyIdentity(proxyB), await decl.F(), await declB.G()];
+  fs.rmSync(copyRoot, { recursive: true, force: true });
+  out.subpathIdentity = [["AsyncProxy", "EventProxy", "RegisteringProxy", "InterfaceFunction", "IsInterfaceProxy", "GetInterfaceProxyIdentity", "GetResponsibleModule", "RunWithResponsibleModule"].map((k) => c[k] === px[k]), ["Events", "ListModules", "RunWithModuleContext", "GetModuleContext", "ReleaseOwner"].map((k) => c[k] === m[k])];
+  const mdist = (n) => require(dist + "/" + n);
+  out.runtimeIdentity = ["GetRuntimeInfo", "RegisterDevServer", "DEV_REGISTRY_PATH"].map((k) => mdist("runtime.js")[k] === c[k]);
+  const nc = new c.RegisteringProxy();
+  const nl = [];
+  nc.onUnregister((id) => nl.push("u0:" + id));
+  nc.onRegister((id) => nl.push("r:" + id), true);
+  nc.onUnregister((id) => nl.push("u1:" + id));
+  m.ReleaseOwner("@antelopejs/interface-core/default-provider");
+  nc.register("n"); nc.unregister("n");
+  out.onUnregisterNoContextOrder = nl;
+  console.log(JSON.stringify(out));
+})();
+`,
+    expected: String.raw`{"reregisterReplacesOwner":[["r:k1","r:k2"],["u:k"]],"registrationReplayOrder":["first","second","third"],"queueIsFifo":[[1,2,3],[1,2,3]],"unregisterInPlaceDuringReplay":["u:a"],"onUnregisterChecksUnregisterFirst":["r:x"],"onUnregisterOtherOwnerIsAuto":[],"callbackContexts":["r@prov:e","u@prov:e"],"onRegisterManualDetach":["r:1"],"destroyedGenerationCallback":["ERR_MODULE_CONTEXT_INVALIDATED","ERR_MODULE_CONTEXT_INVALIDATED"],"outsideContextRegistrationSurvives":["r:outside"],"functionArgumentContext":"P","twoCopies":[true,true,"async:x",true,"async:y","attached by the other copy","attached by this copy"],"subpathIdentity":[[true,true,true,true,true,true,true,true],[true,true,true,true,true]],"runtimeIdentity":[true,true,true],"onUnregisterNoContextOrder":["r:n"]}`,
+  },
+} satisfies { [name: string]: { script: string; expected: string } };
