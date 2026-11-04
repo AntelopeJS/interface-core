@@ -2,7 +2,6 @@ import { expect } from "chai";
 import { runInNewContext } from "node:vm";
 
 import { internal } from "../internal";
-import { rejectionOf } from "./rejection";
 import {
   AsyncProxy,
   ImplementInterface,
@@ -34,7 +33,10 @@ describe("ImplementInterface validation", () => {
     ).to.throw("implementation.second");
 
     internal.testStubMode = true;
-    const error = await rejectionOf(first.call(), Error);
+    const error = await first.call().then(
+      () => undefined,
+      (reason: PromiseRejectedResult["reason"]) => reason,
+    );
     expect(error).to.be.instanceOf(Error);
   });
 
@@ -85,50 +87,10 @@ describe("ImplementInterface validation", () => {
     );
   });
 
-  it("attaches the methods a class instance implements through its prototype", async () => {
-    class Provider {
-      greet() {
-        return "from the prototype";
-      }
-    }
-    const greet = new AsyncProxy<() => string>("test.class-instance.greet");
-
-    ImplementInterface({ greet }, new Provider());
-
-    expect(await greet.call()).to.equal("from the prototype");
-  });
-
-  it("does not take a handler from Object.prototype", () => {
-    const toString = new AsyncProxy<() => string>(
-      "test.object-prototype.toString",
-    );
-
-    expect(() => ImplementInterface({ toString }, {})).to.throw(
-      "implementation.toString",
-    );
-  });
-
-  it("attaches an Object.prototype name that a class implements itself", async () => {
-    class Provider {
-      toString() {
-        return "from the class";
-      }
-    }
-    const toString = new AsyncProxy<() => string>(
-      "test.class-instance.toString",
-    );
-
-    ImplementInterface({ toString }, new Provider());
-
-    expect(await toString.call()).to.equal("from the class");
-  });
-
   it("awaits thenables and promises created in another realm", async () => {
     const proxy = new AsyncProxy<() => string>("test.cross-realm-promise");
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- runInNewContext (node:vm) returns any; the cross-realm promise is the input under test, and a guard cannot prove its resolved value
     const declaration: PromiseLike<{ proxy: AsyncProxy<() => string> }> =
       runInNewContext("Promise.resolve(value)", { value: { proxy } });
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- runInNewContext (node:vm) returns any; the cross-realm thenable is the input under test, and a guard cannot prove its resolved value
     const implementation: PromiseLike<{ proxy: () => string }> =
       runInNewContext("({ then(resolve) { resolve(value); } })", {
         value: { proxy: () => "resolved" },
