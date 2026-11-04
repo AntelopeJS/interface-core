@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.3.1
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.3.0...v0.3.1)
+
+### 📖 Documentation
+
+- **readme:** Use one Discord invite ([#59](https://github.com/AntelopeJS/interface-core/pull/59))
+- **github:** Send questions and ideas to Discord ([#64](https://github.com/AntelopeJS/interface-core/pull/64))
+
+### 📦 Build
+
+- **deps:** Bump @antelopejs/tooling-configs to 0.2.17 ([#55](https://github.com/AntelopeJS/interface-core/pull/55))
+
+### 🏡 Chore
+
+- Land the cleanup campaign on main ([#73](https://github.com/AntelopeJS/interface-core/pull/73))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli ([@Upd4ting](http://github.com/Upd4ting))
+
 ## v0.3.0
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.2.7...v0.3.0)
