@@ -9,6 +9,8 @@
 
 The primitives every AntelopeJS interface is built from: proxies that cross module boundaries, decorator factories, module lifecycle events, structured logging and project configuration.
 
+Part of [AntelopeJS](https://github.com/AntelopeJS/antelopejs). Used by [AntelopeJS DMS](https://github.com/AntelopeJS/dms), the open-source back office for your PostgreSQL, MongoDB or RethinkDB database.
+
 ## What it offers
 
 - `InterfaceFunction` declares a contract function; `ImplementInterface` attaches a module's implementation to it. Calls made before the implementation attaches wait in a queue.
