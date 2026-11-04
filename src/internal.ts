@@ -108,12 +108,6 @@ function addToMapSet<T>(map: Map<string, Set<T>>, key: string, value: T) {
   map.set(key, values);
 }
 
-function createInterfaceConnections(): InterfaceRuntime["interfaceConnections"] {
-  const connections: InterfaceRuntime["interfaceConnections"] = {};
-  Reflect.setPrototypeOf(connections, null);
-  return connections;
-}
-
 function createRuntime(): InterfaceRuntime {
   const runtime: InterfaceRuntime = {
     protocol: RUNTIME_PROTOCOL_VERSION,
@@ -123,7 +117,7 @@ function createRuntime(): InterfaceRuntime {
     knownRegisters: new Map(),
     registeringProxies: new Set(),
     knownEvents: new Set(),
-    interfaceConnections: createInterfaceConnections(),
+    interfaceConnections: Object.create(null),
     executionContext: new AsyncLocalStorage<ActiveModuleExecutionContext>(),
     activeOwnerTokens: new Map(),
     nextProxyIdentity: 1,

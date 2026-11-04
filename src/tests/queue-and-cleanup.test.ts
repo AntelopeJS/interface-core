@@ -2,7 +2,6 @@ import { expect } from "chai";
 
 import { Events, RunWithModuleContext } from "../modules";
 import { internal, type RuntimeErrorDetails } from "../internal";
-import { rejectionOf } from "./rejection";
 import {
   AsyncProxy,
   EventProxy,
@@ -29,7 +28,10 @@ describe("bounded queues and resilient cleanup", () => {
     const first = proxy.call(1);
     const second = proxy.call(2);
 
-    const error = await rejectionOf(proxy.call(3), ProviderQueueFullError);
+    const error = await proxy.call(3).then(
+      () => undefined,
+      (reason: PromiseRejectedResult["reason"]) => reason,
+    );
     expect(error).to.be.instanceOf(ProviderQueueFullError);
     proxy.onCall((value) => value * 2, true);
 

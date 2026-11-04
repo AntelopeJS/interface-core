@@ -99,7 +99,7 @@ describe("test stub mode", () => {
     });
 
     it("accepts an error carrying the code from another realm", () => {
-      const foreignRealmError: unknown = runInNewContext(
+      const foreignRealmError: Error = runInNewContext(
         "Object.assign(new Error('other realm'), { code })",
         { code: MISSING_PROVIDER_CODE },
       );

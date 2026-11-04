@@ -94,12 +94,20 @@ interface MaybeBranded {
   readonly [PROXY_BRAND]?: ProxyBrand;
 }
 
-function isObjectLike(value: unknown): value is object {
+function isObjectLike(
+  value: Parameters<typeof IsInterfaceProxy>[0],
+): value is object {
   return (typeof value === "object" || typeof value === "function") && !!value;
 }
 
-function readBrand(value: MaybeBranded): ProxyBrand | undefined {
-  const brand = value[PROXY_BRAND];
+function readBrand(
+  value: Parameters<typeof IsInterfaceProxy>[0],
+): ProxyBrand | undefined {
+  if (!isObjectLike(value)) {
+    return;
+  }
+  const holder: MaybeBranded = value;
+  const brand = holder[PROXY_BRAND];
   if (!brand || brand.protocol !== RUNTIME_PROTOCOL_VERSION) {
     return;
   }
@@ -108,18 +116,12 @@ function readBrand(value: MaybeBranded): ProxyBrand | undefined {
 
 /** Returns whether a value implements this runtime's stable proxy protocol. */
 export function IsInterfaceProxy(value: unknown, kind?: ProxyKind): boolean {
-  if (!isObjectLike(value)) {
-    return false;
-  }
   const brand = readBrand(value);
   return Boolean(brand && (!kind || brand.kind === kind));
 }
 
 /** Returns the identity a proxy was declared with, for diagnostics. */
 export function GetInterfaceProxyIdentity(value: unknown): string | undefined {
-  if (!isObjectLike(value)) {
-    return;
-  }
   return readBrand(value)?.identity;
 }
 
@@ -269,7 +271,6 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
   private invoke(attachment: Attachment<T>, args: Parameters<T>): Promise<R> {
     try {
       return Promise.resolve(
-        // oxlint-disable-next-line typescript/no-unsafe-return -- T extends Func calls return any and R is an independent type parameter of the published class, so the call result cannot be typed R without asserting it
         runAttachment(attachment, (callback) => callback(...args)),
       );
     } catch (error) {
