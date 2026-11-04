@@ -12,6 +12,7 @@ journeys:
   - rule-details
   - proxy-types
   - proxy-types-reject
+  - tsdoc-details
 ---
 
 # Proxies
@@ -26,6 +27,7 @@ A module author declares calls with `AsyncProxy` and `InterfaceFunction`, notifi
 - `surface-details`: `onCall` replaces an earlier callback; `emit` reports a throwing handler to the runtime reporter and still runs the later ones, an asynchronous handler is not awaited; a provider's synchronous throw rejects the call.
 - `rule-details`: re-registering an ID from another module moves ownership (destroying the first module leaves the entry, destroying the second unregisters it); stored registrations and queued calls replay first in, first out, and queued promises settle in that order; `onHandlers` has the unregister callback in place during replay, so an unregister from inside replay reaches it; `onUnregister` takes its owner and manual-detach setting from the unregister attachment first and the register attachment second (in a module context, and with no context through the default owner), takes the context owner with automatic cleanup when no attachment belongs to it, and leaves the register callback alone; `onRegister(cb, true)` survives its owner and without the flag does not; the register and unregister callbacks run in the context they were attached in, also when a registrar's destruction triggers the unregister; a destroyed generation's callback fails with `ERR_MODULE_CONTEXT_INVALIDATED` when it registers or reads the context; a registration made outside any context survives every release; a function argument runs in the provider's context; a second copy of the built package recognises proxies of the first (`IsInterfaceProxy`, `GetInterfaceProxyIdentity`) and attaches providers to its declarations, both ways; the root and the `/proxies` and `/modules` subpaths export the same objects.
 - `proxy-types` and `proxy-types-reject`: `AttachmentLease` imports from `/proxies` and `onCall` returns one; a value checked only with `IsInterfaceProxy` is still `unknown` (TS18046); the root does not re-export `AttachmentLease` (TS2305).
+- `tsdoc-details`: after the module that attached a provider is destroyed, a new call stays pending (outside stub mode) and resolves once a new provider attaches.
 
 ## How to get to it (user POV)
 

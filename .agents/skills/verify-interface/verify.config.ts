@@ -196,7 +196,9 @@ const runtimeTypesBad = (dist: string) => `import type { DevServerRegistry, DevS
 const noPid: DevServerRegistry = { startedAt: "x", servers: {} };
 const portText: DevServerEndpoint = { protocol: "http", host: "h", port: "5011" };
 const noEnv: RuntimeInfo = { dev: true, projectPath: "/p" };
-void noPid; void portText; void noEnv;
+const noProjectPath: RuntimeInfo = { dev: true, env: "default" };
+const noDev: RuntimeInfo = { projectPath: "/p", env: "default" };
+void noPid; void portText; void noEnv; void noProjectPath; void noDev;
 `;
 
 const config: VerifyConfig = {
@@ -232,7 +234,8 @@ const config: VerifyConfig = {
     "proxy-types": compiled("AttachmentLease imports from the proxies subpath and onCall returns one", "docs/2.proxies.md", proxyTypesOk),
     "proxy-types-reject": compiled("IsInterfaceProxy does not narrow and the root does not re-export AttachmentLease", "docs/2.proxies.md", proxyTypesBad, ["TS18046", "TS2305"]),
     "runtime-types": compiled("the dev registry types accept the documented shapes", "docs/8.runtime.md", runtimeTypesOk),
-    "runtime-types-reject": compiled("the dev registry types refuse a missing pid, a text port and a missing env", "docs/8.runtime.md", runtimeTypesBad, ["TS2322", "TS2741", "TS2741"]),
+    "runtime-types-reject": compiled("the dev registry types refuse a missing pid, a text port and a missing env, projectPath or dev", "docs/8.runtime.md", runtimeTypesBad, ["TS2322", "TS2741", "TS2741", "TS2741", "TS2741"]),
+    "tsdoc-details": scenario("tsdoc-details", "validation before attaching, the real descriptor for method decorators, listener cleanup, queueing after a provider is destroyed and the returned objects behave as the TSDoc and docs/1, 3, 6 state", "the TSDoc of src/ and docs/3.decorators.md"),
     "implement-interface": scenario("implement", "ImplementInterface validates first, attaches all or none, and the lookups answer as docs/2.proxies.md states", "docs/2.proxies.md"),
     "implement-types": compiled("InterfaceToImpl types each member as docs/2.proxies.md states", "docs/2.proxies.md", implOk),
     "implement-types-reject": compiled("a synchronous proxy takes no async implementation", "docs/2.proxies.md", implBad, ["TS2769"]),
