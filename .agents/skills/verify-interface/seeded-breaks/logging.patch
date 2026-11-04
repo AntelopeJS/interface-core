@@ -1,0 +1,13 @@
+diff --git a/src/logging/index.ts b/src/logging/index.ts
+index d87dfe1..6afd0f2 100644
+--- a/src/logging/index.ts
++++ b/src/logging/index.ts
+@@ -63,7 +63,7 @@ export namespace Logging {
+      * @param args - Values to log, which can be of any type and will be serialized appropriately
+      */
+     public Warn(...args: unknown[]): void {
+-      emit(Level.WARN, this.channel, args);
++      emit(Level.INFO, this.channel, args);
+     }
+ 
+     /**

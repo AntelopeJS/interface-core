@@ -7,6 +7,12 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 const repository = dirname(dirname(fileURLToPath(import.meta.url)));
 const temporary = mkdtempSync(join(tmpdir(), "interface-core-consumer-"));
 
+/**
+ * @param {string} command
+ * @param {string[]} args
+ * @param {string} cwd
+ * @param {NodeJS.ProcessEnv} [env]
+ */
 function run(command, args, cwd, env = process.env) {
   execFileSync(command, args, { cwd, env, stdio: "inherit" });
 }
@@ -134,19 +140,37 @@ modules.RunWithModuleContext(providerContext, () => {
 `;
 }
 
+/**
+ * @param {unknown} value
+ * @returns {value is { filename: string }}
+ */
+function isPackResult(value) {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "filename" in value &&
+    typeof value.filename === "string"
+  );
+}
+
 try {
-  const { filename: tarball } = JSON.parse(
+  /** @type {unknown} */
+  const packed = JSON.parse(
     execFileSync(
       "corepack",
       ["pnpm", "pack", "--pack-destination", temporary, "--json"],
       {
         cwd: repository,
+        encoding: "utf8",
         env: { ...process.env, npm_config_ignore_scripts: "true" },
         stdio: ["ignore", "pipe", "inherit"],
       },
     ),
   );
-  createConsumer(tarball);
+  if (!isPackResult(packed)) {
+    throw new TypeError("pnpm pack --json printed no filename.");
+  }
+  createConsumer(packed.filename);
   run(
     "corepack",
     ["pnpm", "install", "--ignore-workspace", "--frozen-lockfile=false"],

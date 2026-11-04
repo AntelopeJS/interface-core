@@ -6,6 +6,7 @@ import {
   ReleaseOwner,
   RunWithModuleContext,
 } from "../modules";
+import { rejectionOf } from "./rejection";
 import {
   AsyncProxy,
   EventProxy,
@@ -44,13 +45,6 @@ function deferred() {
     resolve = done;
   });
   return { promise, resolve };
-}
-
-function outcomeOf(promise: Promise<unknown>) {
-  return promise.then(
-    () => "resolved",
-    (error: PromiseRejectedResult["reason"]) => error,
-  );
 }
 
 describe("call chain: a module serving a call owns what it registers", () => {
@@ -110,7 +104,10 @@ describe("call chain: queued calls", () => {
   it("rejects a queued call whose caller was destroyed before the provider attached", async () => {
     const proxy = new AsyncProxy<() => string>();
     let served = 0;
-    const pending = outcomeOf(inModule("a", "a#4", () => proxy.call()));
+    const pending = rejectionOf(
+      inModule("a", "a#4", () => proxy.call()),
+      ModuleContextInvalidatedError,
+    );
 
     destroy("a", "a#4");
     inModule("b", "b#5", () =>
@@ -364,7 +361,7 @@ describe("call chain: fence on a destroyed generation", () => {
     const gate = deferred();
     const outcome = inModule("a", "a#14", async () => {
       await gate.promise;
-      return outcomeOf(proxy.call());
+      return rejectionOf(proxy.call(), ModuleContextInvalidatedError);
     });
 
     destroy("a", "a#14");
@@ -384,8 +381,8 @@ describe("call chain: fence on a destroyed generation", () => {
     destroy("a", "a#15");
     gate.resolve();
 
-    expect(await outcomeOf(outcome)).to.be.instanceOf(
-      ModuleContextInvalidatedError,
-    );
+    expect(
+      await rejectionOf(outcome, ModuleContextInvalidatedError),
+    ).to.be.instanceOf(ModuleContextInvalidatedError);
   });
 });

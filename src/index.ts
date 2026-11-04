@@ -38,7 +38,7 @@ function copyMissingProperties<T extends Record<string, any>>(
   const target: Record<string, T[keyof T]> = data;
   const source: Record<string, T[keyof T]> = parent;
   for (const key of Object.getOwnPropertyNames(source)) {
-    if (!(key in target)) {
+    if (!Object.hasOwn(target, key)) {
       target[key] = source[key];
     }
   }
@@ -59,11 +59,14 @@ export function GetMetadata<
   T extends Record<string, any>,
   U extends Record<string, any>,
 >(target: U, meta: Class<T, [U]> & { key: symbol }, inherit = true): T {
+  // oxlint-disable-next-line typescript/no-unsafe-assignment -- Reflect.getOwnMetadata returns reflect-metadata's any; the stored instance may come from another module copy of the metadata class sharing the Symbol.for key, so instanceof cannot verify it and a typed local would only assert it
   let data: T = Reflect.getOwnMetadata(meta.key, target);
   if (!data) {
     data = new meta(target);
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- Object.getPrototypeOf returns the lib's any; the recursion below needs the prototype as U, which a prototype is not, and an unknown local plus a guard cannot produce a U
     const proto = Object.getPrototypeOf(target);
     if (inherit && proto) {
+      // oxlint-disable-next-line typescript/no-unsafe-argument -- proto is the any of Object.getPrototypeOf passed as the U of the recursive GetMetadata call; tsc rejects an object-narrowed prototype for U
       const parent = GetMetadata(proto, meta, true);
       if (hasInherit(data)) {
         data.inherit(parent);
@@ -93,7 +96,12 @@ type InterfaceImplType<T> =
             ? InterfaceToImpl<T>
             : never;
 
-type InterfaceToImpl<T> = T extends infer P
+/**
+ * The implementation an interface declaration `T` accepts: each member optional,
+ * an async proxy implemented by its function, a registering proxy by its
+ * `register` and `unregister` callbacks, and an event proxy by nothing.
+ */
+export type InterfaceToImpl<T> = T extends infer P
   ? {
       [K in keyof P]?: InterfaceImplType<P[K]>;
     }
@@ -155,7 +163,7 @@ function assertAcyclic(value: Unparsed, label: string) {
   visit(value, label);
 }
 
-function carriesProxy(value: Unparsed): value is Func & { proxy: Unparsed } {
+function carriesProxy(value: Unparsed): value is Func & { proxy: unknown } {
   return typeof value === "function" && "proxy" in value;
 }
 
@@ -196,6 +204,21 @@ function planProxyAttachment(
   );
 }
 
+/**
+ * The value an implementation answers under a key, read as `implementation[key]`
+ * so getters and Proxy traps see the implementation as their receiver. A key
+ * that is an `Object.prototype` name, is not the implementation's own, and
+ * resolves to that root's own value is treated as not implemented.
+ */
+function implementedAt(implementation: UnparsedRecord, key: string): Unparsed {
+  const answeredByRoot =
+    Object.hasOwn(Object.prototype, key) &&
+    !Object.hasOwn(implementation, key) &&
+    implementation[key] ===
+      Object.getOwnPropertyDescriptor(Object.prototype, key)?.value;
+  return answeredByRoot ? undefined : implementation[key];
+}
+
 function createAttachmentPlan(
   declaration: UnparsedRecord,
   implementation: UnparsedRecord,
@@ -203,7 +226,7 @@ function createAttachmentPlan(
 ): AttachmentPlan[] {
   const plans: AttachmentPlan[] = [];
   for (const [key, declared] of Object.entries(declaration)) {
-    const implemented = implementation[key];
+    const implemented = implementedAt(implementation, key);
     const proxy = carriesProxy(declared) ? declared.proxy : declared;
     const proxyPlan = planProxyAttachment(proxy, implemented, `${path}.${key}`);
     if (proxyPlan) {
@@ -275,7 +298,7 @@ function isThenable(value: Unparsed): value is PromiseLike<unknown> {
  * @throws {TypeError} For malformed arguments, object cycles, or missing handlers.
  */
 export function ImplementInterface<
-  T extends Record<string, unknown>,
+  T extends object,
   T2 extends InterfaceToImpl<T>,
 >(declaration: T, implementation: T2): { declaration: T; implementation: T2 };
 
@@ -283,7 +306,7 @@ export function ImplementInterface<
  * @deprecated Please use the non-async version of this function.
  */
 export function ImplementInterface<
-  T extends Record<string, unknown>,
+  T extends object,
   T2 extends InterfaceToImpl<T>,
 >(
   declaration: T | PromiseLike<T>,

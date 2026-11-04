@@ -1,0 +1,13 @@
+diff --git a/src/index.ts b/src/index.ts
+index 8d6b61b..5de14e7 100644
+--- a/src/index.ts
++++ b/src/index.ts
+@@ -38,7 +38,7 @@ function copyMissingProperties<T extends Record<string, any>>(
+   const target: Record<string, T[keyof T]> = data;
+   const source: Record<string, T[keyof T]> = parent;
+   for (const key of Object.getOwnPropertyNames(source)) {
+-    if (!Object.hasOwn(target, key)) {
++    if (Object.hasOwn(target, key)) {
+       target[key] = source[key];
+     }
+   }

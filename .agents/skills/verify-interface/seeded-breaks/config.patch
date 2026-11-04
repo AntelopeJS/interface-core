@@ -1,0 +1,11 @@
+diff --git a/src/config.ts b/src/config.ts
+index 5b4f395..1283e03 100644
+--- a/src/config.ts
++++ b/src/config.ts
+@@ -154,5 +154,5 @@ export type ConfigInput =
+   | ((ctx: ConfigContext) => AntelopeConfig | Promise<AntelopeConfig>);
+ 
+ export function defineConfig(input: ConfigInput): ConfigInput {
+-  return input;
++  return typeof input === "function" ? input : { ...input };
+ }
