@@ -106,7 +106,7 @@
   },
   "devDependencies": {
     "@antelopejs/core": "^1.19.0",
-    "@antelopejs/tooling-configs": "file:.campaign/tgz/antelopejs-tooling-configs-263f673.tgz",
+    "@antelopejs/tooling-configs": "^0.2.18",
     "@types/chai": "^4.3.20",
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.19.15",
@@ -125,11 +125,6 @@
     "typescript": "^5.9.3"
   },
   "packageManager": "pnpm@10.6.5",
-  "pnpm": {
-    "overrides": {
-      "@antelopejs/tooling-configs": "file:.campaign/tgz/antelopejs-tooling-configs-263f673.tgz"
-    }
-  },
   "antelopeJs": {
     "test": "src/antelope.test.ts",
     "skills": [
