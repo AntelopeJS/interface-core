@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.2
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.3.1...v0.3.2)
+
+### 🩹 Fixes
+
+- Restore the 0.3.0 behaviour for the 0.3.x line ([#74](https://github.com/AntelopeJS/interface-core/pull/74))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli ([@Upd4ting](http://github.com/Upd4ting))
+
 ## v0.3.1
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.3.0...v0.3.1)
