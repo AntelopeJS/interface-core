@@ -208,7 +208,6 @@ const config: VerifyConfig = {
     contract: {
       globs: ["src/**", "package.json"],
       funnels: [],
-      containments: [],
       why: "the proxies, ImplementInterface, error codes, subpaths and runtime protocol are what every interface and the core load; src/internal.ts also carries the cross-copy protocol version",
     },
     outbound: null,
@@ -216,7 +215,6 @@ const config: VerifyConfig = {
     publish: {
       globs: ["package.json", ".release-it.json", "changelogen.config.json", ".github/workflows/release.yml"],
       funnels: [],
-      containments: [],
       why: "the package name and release workflow claim @antelopejs/interface-core on npm",
     },
   },
