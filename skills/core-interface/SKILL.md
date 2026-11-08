@@ -120,6 +120,8 @@ ch.Debug("query", { ms: 12 });
 - `RegisteringProxy` replays existing registrations to a newly attached provider (hot reload safe);
   `EventProxy.register` deduplicates by function identity; both auto-clean handlers of destroyed
   modules via `Events.ModuleDestroyed`.
+- A `RegisteringProxy` without a type argument types the id and arguments as `unknown`; pass the
+  register signature (`RegisteringProxy<(id: string, path: string) => void>`) to type them.
 - `GetMetadata` needs a metadata class with a static `key: symbol`; it inherits from the prototype
   chain by default (pass `inherit = false` to disable). `reflect-metadata` is loaded by the main
   entry point.
