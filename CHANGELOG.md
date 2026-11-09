@@ -1,5 +1,40 @@
 # Changelog
 
+## v0.4.1
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.4.0...v0.4.1)
+
+### 🔥 Performance
+
+- **build:** Skip the lib check in build, typecheck keeps it ([#82](https://github.com/AntelopeJS/interface-core/pull/82))
+
+### 🩹 Fixes
+
+- **proxies:** Type an untyped RegisteringProxy's id and arguments as unknown ([#83](https://github.com/AntelopeJS/interface-core/pull/83))
+
+### 📖 Documentation
+
+- **readme:** Link the package to AntelopeJS and AntelopeJS DMS ([258bb64](https://github.com/AntelopeJS/interface-core/commit/258bb64))
+- **modules:** State that ReloadModule keeps the loaded definition ([#84](https://github.com/AntelopeJS/interface-core/pull/84))
+
+### 📦 Build
+
+- **deps:** Bump @antelopejs packages to the 2026-11-06 releases ([#81](https://github.com/AntelopeJS/interface-core/pull/81))
+- **deps:** Bump @antelopejs/tooling-configs to 0.4.0 ([#85](https://github.com/AntelopeJS/interface-core/pull/85))
+
+### 🏡 Chore
+
+- **verify:** Remove seeded runs from the verification skill ([#78](https://github.com/AntelopeJS/interface-core/pull/78))
+- **ci:** Remove the weekly mutation caller ([#79](https://github.com/AntelopeJS/interface-core/pull/79))
+
+### 🤖 CI
+
+- Call ci-node.yml@v1 ([#80](https://github.com/AntelopeJS/interface-core/pull/80))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli ([@Upd4ting](http://github.com/Upd4ting))
+
 ## v0.4.0
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.3.2...v0.4.0)
