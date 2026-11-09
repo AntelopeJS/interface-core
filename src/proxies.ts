@@ -20,7 +20,11 @@ import {
 } from "./internal";
 
 type Func<A extends any[] = any[], R = any> = (...args: A) => R;
-type RegisterFunction = (id: any, ...args: any[]) => void;
+type RegisterSignature<Id, Args extends unknown[]> = (
+  id: Id,
+  ...args: Args
+) => void;
+type RegisterFunction = RegisterSignature<any, any[]>;
 type RID<T> = T extends (id: infer P, ...args: any[]) => void ? P : never;
 type RArgs<T> = T extends (id: any, ...args: infer P) => void ? P : never;
 type ProxyKind = ProxyBrand["kind"];
@@ -311,7 +315,9 @@ export function InterfaceFunction<
 }
 
 /** Proxy for register and unregister handlers, served by a single provider. */
-export class RegisteringProxy<T extends RegisterFunction = RegisterFunction> {
+export class RegisteringProxy<
+  T extends RegisterFunction = RegisterSignature<unknown, unknown[]>,
+> {
   public readonly [PROXY_BRAND]: ProxyBrand;
   private handlers: RegisterHandlers<T> = {};
   private readonly registered = new Map<RID<T>, RegisteredEntry<T>>();
