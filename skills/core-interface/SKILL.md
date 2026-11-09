@@ -126,6 +126,8 @@ ch.Debug("query", { ms: 12 });
 - `ModuleDefinition.source` is a `ModuleDefinitionSource`: a `type` string (`local`, `git`,
   `package`, `local-folder` are built in) plus the optional fields of those kinds; unknown fields
   are type errors. `ConfigVarProvider<Config = unknown>` takes the module's configuration type.
+- `ReloadModule` reloads a module's code with the source and config it was loaded with; it does not
+  read `SaveModuleDeclaration`'s write. Pass a new definition to `LoadModule` to run it.
 - Decorator factory callbacks split their arguments: decorator targets first (class / target+key /
   target+key+descriptor), then the factory's own parameters.
 

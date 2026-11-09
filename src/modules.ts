@@ -346,6 +346,11 @@ export const DestroyModule = InterfaceFunction<(module: string) => void>(
  * and reloads it from the source. Useful for updating modules without restarting
  * the entire application.
  *
+ * The reloaded module keeps the source, config, import overrides and disabled
+ * exports it was loaded with. A declaration written by
+ * {@link SaveModuleDeclaration} is not read: to run a new definition, pass it
+ * to {@link LoadModule}.
+ *
  * @param module The module ID to reload
  * @throws Error if the module cannot be reloaded
  */
@@ -384,8 +389,9 @@ export const ListModuleDeclarations = InterfaceFunction<
  * Only the given fields of the module's entry are rewritten, and the entry is
  * added when the file has none: every other line of the file, comments and
  * expressions included, stays as it was. The running project is not
- * restarted for this write; the caller loads, stops or reloads the module
- * itself.
+ * restarted for this write, and {@link ReloadModule} keeps the definition the
+ * module runs with: to run the saved source or config now, the caller passes
+ * them to {@link LoadModule}.
  *
  * @param module The module's key in `modules`
  * @param changes The fields to write
