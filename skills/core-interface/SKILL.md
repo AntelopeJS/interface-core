@@ -26,6 +26,7 @@ import {
   EventProxy,
   RegisteringProxy,
   GetResponsibleModule,
+  type InterfaceToImpl,
 } from "@antelopejs/interface-core";
 import {
   MakeClassDecorator,
@@ -96,6 +97,31 @@ For a `RegisteringProxy` field, the implementation entry is an object:
 `{ register: (id, ...args) => void, unregister: (id) => void }`. `EventProxy` fields are never
 implemented; providers `emit` on them, consumers `register`/`unregister` handlers.
 
+The declaration is any object (`T extends object`), so a declaration typed by a TypeScript
+`interface`, which has no index signature, is accepted. `InterfaceToImpl<T>`, exported from
+`@antelopejs/interface-core`, types an implementation by its declaration: every member is optional
+in the type, an `AsyncProxy<F>` takes an `F`, a `RegisteringProxy` takes `{ register, unregister }`,
+an `EventProxy` takes nothing (`never`), and a nested object takes its own `InterfaceToImpl`.
+
+```ts
+import {
+  AsyncProxy,
+  ImplementInterface,
+  type InterfaceToImpl,
+} from "@antelopejs/interface-core";
+
+interface ClockInterface {
+  now: AsyncProxy<() => number>;
+}
+
+const clock: ClockInterface = { now: new AsyncProxy<() => number>() };
+const implementation: InterfaceToImpl<ClockInterface> = {
+  now: () => Date.now(),
+};
+
+ImplementInterface(clock, implementation);
+```
+
 ## Logging
 
 ```ts
@@ -113,7 +139,9 @@ ch.Debug("query", { ms: 12 });
   `ajs module test` stub mode they reject instead with "Interface function called without
   implementation in test environment. Ensure the required module is loaded in your test config.".
 - Prefer the synchronous `ImplementInterface(decl, impl)`; the Promise-accepting overload is
-  deprecated. Implementations may be partial - unmatched keys keep queuing.
+  deprecated. `InterfaceToImpl` marks every key optional, but handlers are still validated at run
+  time: every declared async proxy needs a function and every registering proxy needs both
+  `register` and `unregister`, or the call throws `TypeError` before attaching anything.
 - Module attribution (`GetResponsibleModule`) reads the async module context the core enters for
   each module. Provider callbacks run in the provider's context and event handlers in their
   registrant's; a function passed as an argument runs in whichever context invokes it.
