@@ -1,10 +1,8 @@
 name: CI probe windows
 
 on:
-  pull_request:
   push:
-    branches: [main]
-  workflow_dispatch: null
+    branches: [ci/ant-2175-windows-probe]
 
 permissions:
   contents: read
