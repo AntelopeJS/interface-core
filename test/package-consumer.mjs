@@ -14,7 +14,7 @@ const temporary = mkdtempSync(join(tmpdir(), "interface-core-consumer-"));
  * @param {NodeJS.ProcessEnv} [env]
  */
 function run(command, args, cwd, env = process.env) {
-  execFileSync(command, args, { cwd, env, stdio: "inherit" });
+  execFileSync(command, args, { cwd, env, stdio: "inherit", shell: process.platform === "win32" });
 }
 
 function createConsumer(tarball) {
