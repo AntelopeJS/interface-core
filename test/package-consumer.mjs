@@ -163,6 +163,7 @@ try {
         cwd: repository,
         encoding: "utf8",
         env: { ...process.env, npm_config_ignore_scripts: "true" },
+        shell: process.platform === "win32",
         stdio: ["ignore", "pipe", "inherit"],
       },
     ),
