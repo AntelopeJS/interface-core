@@ -1,0 +1,30 @@
+name: CI probe default
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch: null
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: AntelopeJS/.github/.github/workflows/ci-node.yml@ci/windows-opt-in
+    with:
+      docs-files: |
+        README.md
+        docs
+      docs-typescript-project: docs/tsconfig.json
+      renovate-sync: false
+      test-job: true
+    permissions:
+      contents: read
+  renovate-sync:
+    if: >-
+      github.event_name == 'pull_request' && startsWith(github.head_ref, 'renovate/') && github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: write
+      actions: write
+    uses: AntelopeJS/.github/.github/workflows/ci-renovate-sync.yml@v1
