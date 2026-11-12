@@ -14,7 +14,7 @@ async function loadSecondCopy(): Promise<typeof import("..")> {
     (path) => path.startsWith(packageRoot) && !path.startsWith(testsRoot),
   );
   for (const path of packageModules) {
-    Reflect.deleteProperty(require.cache, path);
+    delete require.cache[path];
   }
   try {
     return await import("..");
