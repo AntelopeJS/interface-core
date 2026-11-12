@@ -1,27 +1,34 @@
 import { expect } from "chai";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdtempSync, rmSync } from "node:fs";
 
 import { RunWithModuleContext } from "../modules";
 import { AsyncProxy, RunWithResponsibleModule } from "..";
 
-describe("global runtime protocol", () => {
-  let copyPath: string | undefined;
-
-  afterEach(() => {
-    if (copyPath) {
-      rmSync(dirname(copyPath), { force: true, recursive: true });
-      copyPath = undefined;
+/** Evaluates this package's modules a second time, as a second installed copy would, then restores the shared module cache. */
+async function loadSecondCopy(): Promise<typeof import("..")> {
+  const packageRoot = join(__dirname, "..");
+  const testsRoot = join(packageRoot, "tests");
+  const cache = new Map(Object.entries(require.cache));
+  const packageModules = [...cache.keys()].filter(
+    (path) => path.startsWith(packageRoot) && !path.startsWith(testsRoot),
+  );
+  for (const path of packageModules) {
+    Reflect.deleteProperty(require.cache, path);
+  }
+  try {
+    return await import("..");
+  } finally {
+    for (const path of packageModules) {
+      require.cache[path] = cache.get(path);
     }
-  });
+  }
+}
 
+describe("global runtime protocol", () => {
   it("keeps each physical copy's proxies apart, while sharing module ownership", async () => {
-    const temporary = mkdtempSync(join(process.cwd(), ".interface-core-copy-"));
-    copyPath = join(temporary, "dist");
-    cpSync(join(__dirname, ".."), copyPath, { recursive: true });
-    // oxlint-disable-next-line typescript/no-unsafe-assignment -- require returns any; the module is a byte copy of this package's own dist, loaded by path so the copy stays apart from the local one
-    const foreign: typeof import("..") = require(join(copyPath, "index.js"));
+    const foreign = await loadSecondCopy();
+    expect(foreign.AsyncProxy).not.to.equal(AsyncProxy);
     const localProxy = new AsyncProxy<() => string>("test.cross-copy");
     const foreignProxy = new foreign.AsyncProxy("test.cross-copy");
 

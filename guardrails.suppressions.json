@@ -1,12 +1,12 @@
 {
   "rules": {
     "typescript/no-unsafe-argument": 1,
-    "typescript/no-unsafe-assignment": 5,
+    "typescript/no-unsafe-assignment": 4,
     "typescript/no-unsafe-return": 1
   },
   "tsExpectError": 0,
   "tsIgnore": 0,
-  "safety": 2,
+  "safety": 0,
   "config": {},
   "agentFiles": true
 }
