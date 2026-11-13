@@ -5,7 +5,6 @@ import type { Class } from "./decorators";
 import { type InterfaceConnection, internal } from "./internal";
 import {
   type AsyncProxy,
-  type AttachmentLease,
   type EventProxy,
   GetResponsibleModule,
   IsInterfaceProxy,
@@ -107,28 +106,34 @@ export type InterfaceToImpl<T> = T extends infer P
     }
   : never;
 
-interface AsyncProxyProtocol {
-  onCall(callback: Func): AttachmentLease;
-  detach(lease: AttachmentLease): void;
-}
-
-interface RegisteringProxyProtocol {
-  onHandlers(register: Func, unregister: Func): AttachmentLease;
-  detach(lease: AttachmentLease): void;
-}
-
 interface AttachmentPlan {
   attach(): () => void;
 }
 
+function assertProxyMethod(
+  value: Unparsed,
+  name: string,
+): asserts value is Func {
+  if (typeof value !== "function") {
+    throw new TypeError(`Interface proxy has no ${name} method.`);
+  }
+}
+
 function leasedPlan(
-  proxy: { detach(lease: AttachmentLease): void },
-  attach: () => AttachmentLease,
+  proxy: UnparsedRecord,
+  name: "onCall" | "onHandlers",
+  handlers: Func[],
 ): AttachmentPlan {
   return {
     attach: () => {
-      const lease = attach();
-      return () => proxy.detach(lease);
+      const attach = name === "onCall" ? proxy.onCall : proxy.onHandlers;
+      assertProxyMethod(attach, name);
+      const lease: unknown = attach.call(proxy, ...handlers);
+      return () => {
+        const detach = proxy.detach;
+        assertProxyMethod(detach, "detach");
+        detach.call(proxy, lease);
+      };
     },
   };
 }
@@ -181,11 +186,12 @@ function planProxyAttachment(
   if (IsInterfaceProxy(proxy, "event")) {
     return;
   }
+  if (!isRecord(proxy)) {
+    return;
+  }
   if (IsInterfaceProxy(proxy, "async")) {
     assertFunction(implementation, path);
-    // SAFETY: IsInterfaceProxy(proxy, "async") above checked the AsyncProxy brand.
-    const asyncProxy = proxy as AsyncProxyProtocol;
-    return leasedPlan(asyncProxy, () => asyncProxy.onCall(implementation));
+    return leasedPlan(proxy, "onCall", [implementation]);
   }
   if (!IsInterfaceProxy(proxy, "registering")) {
     return;
@@ -197,11 +203,7 @@ function planProxyAttachment(
   assertFunction(register, `${path}.register`);
   const unregister = implementation.unregister;
   assertFunction(unregister, `${path}.unregister`);
-  // SAFETY: IsInterfaceProxy(proxy, "registering") above checked the RegisteringProxy brand.
-  const registeringProxy = proxy as RegisteringProxyProtocol;
-  return leasedPlan(registeringProxy, () =>
-    registeringProxy.onHandlers(register, unregister),
-  );
+  return leasedPlan(proxy, "onHandlers", [register, unregister]);
 }
 
 /**
