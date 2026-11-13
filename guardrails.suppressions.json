@@ -1,7 +1,7 @@
 {
   "rules": {
     "typescript/no-unsafe-argument": 1,
-    "typescript/no-unsafe-assignment": 4,
+    "typescript/no-unsafe-assignment": 2,
     "typescript/no-unsafe-return": 1
   },
   "tsExpectError": 0,
