@@ -1,14 +1,15 @@
 import { expect } from "chai";
 
 import { GetMetadata } from "..";
+import type { DecoratorTarget } from "../decorators";
 
 class Plain {
   public static readonly key = Symbol("get-metadata.plain");
   declare public first?: number;
   declare public second?: number;
 
-  public constructor(target: Function) {
-    if (target.name === "Child") {
+  public constructor(target: DecoratorTarget) {
+    if (target === Child) {
       this.second = 20;
     }
   }
@@ -19,7 +20,7 @@ class Inheriting {
   declare public first?: number;
   public received?: Inheriting;
 
-  public constructor(readonly target: Function) {}
+  public constructor(readonly target: DecoratorTarget) {}
 
   public inherit(parent: Inheriting) {
     this.received = parent;
