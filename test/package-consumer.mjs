@@ -1,10 +1,30 @@
 import { tmpdir } from "node:os";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 
 const repository = dirname(dirname(fileURLToPath(import.meta.url)));
+const typescriptCompiler = createRequire(import.meta.url).resolve(
+  "typescript/bin/tsc",
+);
+
+/**
+ * The pnpm that runs this script, as a command and its leading arguments. A
+ * JavaScript entry runs on this Node, so Windows needs no `.cmd` launcher.
+ *
+ * @returns {[string, string[]]}
+ */
+function pnpmCommand() {
+  const entry = process.env.npm_execpath;
+  if (entry === undefined) {
+    throw new Error("Run this script through pnpm: pnpm run test:package.");
+  }
+  return /\.[cm]?js$/u.test(entry) ? [process.execPath, [entry]] : [entry, []];
+}
+
+const [pnpm, pnpmArguments] = pnpmCommand();
 const temporary = mkdtempSync(join(tmpdir(), "interface-core-consumer-"));
 
 /**
@@ -22,7 +42,6 @@ function createConsumer(tarball) {
     join(temporary, "package.json"),
     JSON.stringify({
       name: "interface-core-package-consumer",
-      packageManager: "pnpm@10.6.5",
       private: true,
       dependencies: {
         "@antelopejs/interface-core": `file:${tarball}`,
@@ -157,8 +176,8 @@ try {
   /** @type {unknown} */
   const packed = JSON.parse(
     execFileSync(
-      "corepack",
-      ["pnpm", "pack", "--pack-destination", temporary, "--json"],
+      pnpm,
+      [...pnpmArguments, "pack", "--pack-destination", temporary, "--json"],
       {
         cwd: repository,
         encoding: "utf8",
@@ -172,13 +191,19 @@ try {
   }
   createConsumer(packed.filename);
   run(
-    "corepack",
-    ["pnpm", "install", "--ignore-workspace", "--frozen-lockfile=false"],
+    pnpm,
+    [
+      ...pnpmArguments,
+      "install",
+      "--ignore-workspace",
+      "--frozen-lockfile=false",
+    ],
     temporary,
   );
   run(
-    join(repository, "node_modules", ".bin", "tsc"),
+    process.execPath,
     [
+      typescriptCompiler,
       "--noEmit",
       "--strict",
       "--skipLibCheck",
