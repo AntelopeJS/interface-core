@@ -1,9 +1,10 @@
 import { expect } from "chai";
-import { join } from "node:path";
+import { posix } from "node:path";
 import ts from "typescript";
 
-const configModule = join(__dirname, "..", "config").replaceAll("\\", "/");
-const consumerFile = join(__dirname, "setup-consumer.ts");
+const testsFolder = __dirname.replaceAll("\\", "/");
+const configModule = posix.join(testsFolder, "..", "config");
+const consumerFile = posix.join(testsFolder, "setup-consumer.ts");
 
 function diagnosticsFor(setupBody: string): string[] {
   const source = [
@@ -41,6 +42,6 @@ describe("AntelopeTestConfig.setup", () => {
   it("rejects a test section in the overrides, which the core ignores", () => {
     const diagnostics = diagnosticsFor(`{ test: { folder: "other" } }`);
 
-    expect(diagnostics).to.have.length.greaterThan(0);
+    expect(diagnostics.join("\n")).to.include('Omit<AntelopeConfig, "test">');
   });
 });
