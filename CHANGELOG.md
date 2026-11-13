@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.5.1
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.5.0...v0.5.1)
+
+### 🩹 Fixes
+
+- **config:** Reject a test section returned from a test setup ([#92](https://github.com/AntelopeJS/interface-core/pull/92))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli ([@Upd4ting](http://github.com/Upd4ting))
+
 ## v0.5.0
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.4.1...v0.5.0)
