@@ -1,5 +1,35 @@
 # Changelog
 
+## v0.5.0
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.4.1...v0.5.0)
+
+### 💅 Refactors
+
+- Remove the proxy brand casts and the untyped copy load ([#89](https://github.com/AntelopeJS/interface-core/pull/89))
+- ⚠️  Type GetMetadata over prototypes and AsyncProxy from its function ([#91](https://github.com/AntelopeJS/interface-core/pull/91))
+
+### 📖 Documentation
+
+- **skills:** Describe InterfaceToImpl and interface-typed declarations ([#87](https://github.com/AntelopeJS/interface-core/pull/87))
+- **readme:** Adopt the AntelopeJS framework README style ([#88](https://github.com/AntelopeJS/interface-core/pull/88))
+
+### 📦 Build
+
+- **deps:** Bump @antelopejs/tooling-configs to 0.5.1 ([#86](https://github.com/AntelopeJS/interface-core/pull/86))
+
+### ✅ Tests
+
+- **implement-interface:** Let the other realm call ImplementInterface ([#90](https://github.com/AntelopeJS/interface-core/pull/90))
+
+#### ⚠️ Breaking Changes
+
+- ⚠️  Type GetMetadata over prototypes and AsyncProxy from its function ([#91](https://github.com/AntelopeJS/interface-core/pull/91))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli ([@Upd4ting](http://github.com/Upd4ting))
+
 ## v0.4.1
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.4.0...v0.4.1)
