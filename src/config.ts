@@ -70,12 +70,18 @@ export type ConfigVarProvider<Config = unknown> = (
   config: Config,
 ) => Promise<ConfigVars | void> | ConfigVars | void;
 
+/**
+ * The project configuration a test `setup` may override. It has no `test`
+ * section, because the core ignores one returned from `setup`.
+ */
+export type AntelopeTestOverrides = Partial<Omit<AntelopeConfig, "test">>;
+
 export interface AntelopeTestConfig {
   folder?: string;
   setup?: () =>
     | undefined
-    | Partial<AntelopeConfig>
-    | Promise<undefined | Partial<AntelopeConfig>>;
+    | AntelopeTestOverrides
+    | Promise<undefined | AntelopeTestOverrides>;
   cleanup?: () => void | Promise<void>;
 }
 
