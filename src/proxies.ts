@@ -20,6 +20,8 @@ import {
 } from "./internal";
 
 type Func<A extends any[] = any[], R = any> = (...args: A) => R;
+type AsyncFunc = Func<any[], unknown>;
+type Provider<T extends AsyncFunc> = (...args: Parameters<T>) => ReturnType<T>;
 type RegisterSignature<Id, Args extends unknown[]> = (
   id: Id,
   ...args: Args
@@ -206,10 +208,10 @@ export function RunWithResponsibleModule<T>(
 }
 
 /** Proxy for an asynchronous interface function, served by a single provider. */
-export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
+export class AsyncProxy<T extends AsyncFunc = Func> {
   public readonly [PROXY_BRAND]: ProxyBrand;
-  private attachment?: Attachment<T>;
-  private queue: Array<PendingCall<T, R>> = [];
+  private attachment?: Attachment<Provider<T>>;
+  private queue: Array<PendingCall<T, Awaited<ReturnType<T>>>> = [];
 
   public constructor(identity?: string) {
     this[PROXY_BRAND] = createBrand("async", identity);
@@ -219,7 +221,10 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
    * Attaches the provider callback, replacing any previous one, and replays
    * queued calls. The callback runs in the context it was attached in.
    */
-  public onCall(callback: T, manualDetach?: boolean): AttachmentLease {
+  public onCall(
+    callback: Provider<T>,
+    manualDetach?: boolean,
+  ): AttachmentLease {
     const lease = createLease(getAttachmentOwner());
     const attachment = {
       callback,
@@ -244,7 +249,7 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
   }
 
   /** Calls the provider, or queues the call until a provider attaches. */
-  public call(...args: Parameters<T>): Promise<R> {
+  public call(...args: Parameters<T>): Promise<Awaited<ReturnType<T>>> {
     let caller: ActiveModuleExecutionContext | undefined;
     try {
       caller = captureModuleContext();
@@ -265,15 +270,17 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
         ),
       );
     }
-    return new Promise<R>((resolve, reject) => {
+    return new Promise<Awaited<ReturnType<T>>>((resolve, reject) => {
       this.queue.push({ args, caller, resolve, reject });
     });
   }
 
-  private invoke(attachment: Attachment<T>, args: Parameters<T>): Promise<R> {
+  private invoke(
+    attachment: Attachment<Provider<T>>,
+    args: Parameters<T>,
+  ): Promise<Awaited<ReturnType<T>>> {
     try {
       return Promise.resolve(
-        // oxlint-disable-next-line typescript/no-unsafe-return -- T extends Func calls return any and R is an independent type parameter of the published class, so the call result cannot be typed R without asserting it
         runAttachment(attachment, (callback) => callback(...args)),
       );
     } catch (error) {
@@ -281,7 +288,7 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
     }
   }
 
-  private replayQueue(attachment: Attachment<T>) {
+  private replayQueue(attachment: Attachment<Provider<T>>) {
     const pending = this.queue;
     this.queue = [];
     for (const call of pending) {
@@ -304,11 +311,10 @@ export class AsyncProxy<T extends Func = Func, R = Awaited<ReturnType<T>>> {
  *
  * @param identity Optional diagnostic name for the underlying proxy.
  */
-export function InterfaceFunction<
-  T extends Func = Func,
-  R = Awaited<ReturnType<T>>,
->(identity?: string): (...args: Parameters<T>) => Promise<R> {
-  const proxy = new AsyncProxy<T, R>(identity);
+export function InterfaceFunction<T extends AsyncFunc = Func>(
+  identity?: string,
+): (...args: Parameters<T>) => Promise<Awaited<ReturnType<T>>> {
+  const proxy = new AsyncProxy<T>(identity);
   const func = (...args: Parameters<T>) => proxy.call(...args);
   func.proxy = proxy;
   return func;
