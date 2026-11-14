@@ -5,8 +5,9 @@ import { InterfaceFunction } from "./proxies";
  */
 export interface RuntimeInfo {
   /**
-   * Whether the project is running in development mode (`ajs project dev`).
-   * False for `ajs project start` and `ajs project run`.
+   * Whether the project runs from its source configuration rather than a build.
+   * True for `ajs project dev` and `ajs project run`, false for
+   * `ajs project start`.
    */
   dev: boolean;
 
