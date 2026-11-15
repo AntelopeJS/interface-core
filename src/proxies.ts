@@ -100,6 +100,9 @@ interface MaybeBranded {
   readonly [PROXY_BRAND]?: ProxyBrand;
 }
 
+/** Any value a caller may probe for a proxy brand. */
+type Probe = NonNullable<unknown> | null | undefined;
+
 function isObjectLike(value: unknown): value is object {
   return (typeof value === "object" || typeof value === "function") && !!value;
 }
@@ -113,7 +116,7 @@ function readBrand(value: MaybeBranded): ProxyBrand | undefined {
 }
 
 /** Returns whether a value implements this runtime's stable proxy protocol. */
-export function IsInterfaceProxy(value: unknown, kind?: ProxyKind): boolean {
+export function IsInterfaceProxy(value: Probe, kind?: ProxyKind): boolean {
   if (!isObjectLike(value)) {
     return false;
   }
@@ -122,11 +125,8 @@ export function IsInterfaceProxy(value: unknown, kind?: ProxyKind): boolean {
 }
 
 /** Returns the identity a proxy was declared with, for diagnostics. */
-export function GetInterfaceProxyIdentity(value: unknown): string | undefined {
-  if (!isObjectLike(value)) {
-    return;
-  }
-  return readBrand(value)?.identity;
+export function GetInterfaceProxyIdentity(value: Probe): string | undefined {
+  return isObjectLike(value) ? readBrand(value)?.identity : undefined;
 }
 
 function getAttachmentOwner(): string {
