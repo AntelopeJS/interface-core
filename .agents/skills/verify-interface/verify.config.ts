@@ -257,8 +257,6 @@ const config: VerifyConfig = {
       files: [".agents/skills/formal-implement-interface/**", "src/tests/implement-interface-atomicity.test.ts"],
       command: ["sh", "-c", "pnpm run build && pnpm exec mocha dist/tests/implement-interface-atomicity.test.js"],
       violation: null,
-      passing: null,
-      behaviour: { kind: "emit" },
     },
   ],
 };
