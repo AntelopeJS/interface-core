@@ -99,10 +99,16 @@ export namespace Events {
   );
 
   /**
-   * Event triggers before the first module stops.
+   * Event triggers before the project's modules stop.
    *
-   * Fires once per stop following a {@link ModulesStarted}: stopping every
-   * module of a project, or reloading one, is a single "stopping".
+   * Fires once per start, when the project shuts down or tears down (including
+   * after a failed start), even while a `start` is still running. Stopping,
+   * reloading or removing a single module does not fire it.
+   *
+   * Once it fired, the core waits for every started module's `drain` export to
+   * settle (at most 5 s, a failing or late `drain` never blocks the shutdown)
+   * and only then stops the modules. A module finishes its in-flight work in
+   * `drain`, while the rest of the project still runs.
    */
   export const ModulesStopping = new EventProxy<() => void>(
     "modules.ModulesStopping",
