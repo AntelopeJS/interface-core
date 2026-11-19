@@ -23,6 +23,8 @@ jobs:
       docs-typescript-project: docs/tsconfig.json
       renovate-sync: false
       test-job: true
+      setup-commands: |
+        sed -i -e 's|ci-node.yml@ci/wdf26acfc-2-proof|ci-node.yml@v2|' -e '/^  merge_group:$/d' .github/workflows/ci.yml
     permissions:
       contents: read
   renovate-sync:
