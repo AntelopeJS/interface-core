@@ -8,7 +8,7 @@ const MISSING_PROVIDER_MESSAGE =
   "Ensure the required module is loaded in your test config.";
 
 /**
- * Error emitted when a proxy is used without an attached provider in test
+ * Error emitted when a proxy is used without an attached provider in the test
  * stub mode.
  *
  * The detection contract is the type and the stable `code` property, not the
