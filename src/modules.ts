@@ -417,3 +417,25 @@ export const SaveModuleDeclaration = InterfaceFunction<
 export const RemoveModuleDeclaration = InterfaceFunction<
   (module: string) => void
 >("modules.RemoveModuleDeclaration");
+
+/**
+ * Holds the watcher's reloads until the hold is released: a module whose files change meanwhile
+ * is queued, and a change to the project's config or `.env` defers the project restart.
+ * When the last hold ends, each queued module reloads once (and the project restarts once if due).
+ * A hold ends with the module generation that took it. Outside watch mode it holds nothing.
+ *
+ * @returns the hold's id
+ */
+export const HoldReloads = InterfaceFunction<() => Promise<string>>(
+  "modules.HoldReloads",
+);
+
+/**
+ * Ends a hold. When it was the last one, resolves once the reloads it held back have finished,
+ * so the caller can read the reloaded modules. An unknown or ended id resolves at once.
+ *
+ * @param holdId The id {@link HoldReloads} returned
+ */
+export const ReleaseReloads = InterfaceFunction<
+  (holdId: string) => Promise<void>
+>("modules.ReleaseReloads");

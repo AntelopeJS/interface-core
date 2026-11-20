@@ -161,6 +161,8 @@ ch.Debug("query", { ms: 12 });
   are type errors. `ConfigVarProvider<Config = unknown>` takes the module's configuration type.
 - `ReloadModule` reloads a module's code with the source and config it was loaded with; it does not
   read `SaveModuleDeclaration`'s write. Pass a new definition to `LoadModule` to run it.
+- `HoldReloads` queues the watcher's reloads until `ReleaseReloads(holdId)`; the last release resolves
+  once the queued reloads finished. Outside watch mode a hold holds nothing.
 - Decorator factory callbacks split their arguments: decorator targets first (class / target+key /
   target+key+descriptor), then the factory's own parameters.
 
