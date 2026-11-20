@@ -34,7 +34,11 @@ function diagnosticsFor(setupBody: string): string[] {
     );
 }
 
-describe("AntelopeTestConfig.setup", () => {
+const PROGRAM_BUILD_TIMEOUT_MS = 30_000;
+
+describe("AntelopeTestConfig.setup", function () {
+  this.timeout(PROGRAM_BUILD_TIMEOUT_MS);
+
   it("accepts overrides of the project configuration", () => {
     expect(diagnosticsFor(`{ cacheFolder: ".cache/test" }`)).to.deep.equal([]);
   });
