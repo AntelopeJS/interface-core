@@ -1,5 +1,40 @@
 # Changelog
 
+## v0.5.2
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.5.1...v0.5.2)
+
+### 🚀 Enhancements
+
+- **modules:** Add HoldReloads and ReleaseReloads ([#105](https://github.com/AntelopeJS/interface-core/pull/105))
+
+### 📖 Documentation
+
+- **runtime:** Say RuntimeInfo.dev is true under ajs project run ([#94](https://github.com/AntelopeJS/interface-core/pull/94))
+
+### 📦 Build
+
+- **deps:** Move to tooling-configs 0.7.1 and cap @antelopejs ranges below the next minor ([#95](https://github.com/AntelopeJS/interface-core/pull/95))
+- Move to @antelopejs/tooling-configs 0.8 and the three-tier CI ([#97](https://github.com/AntelopeJS/interface-core/pull/97))
+- Bump tooling-configs to 0.8.7 and sync the merge queue CI ([#104](https://github.com/AntelopeJS/interface-core/pull/104))
+
+### 🏡 Chore
+
+- Promote next to main ([#100](https://github.com/AntelopeJS/interface-core/pull/100))
+- Promote next to main ([#102](https://github.com/AntelopeJS/interface-core/pull/102))
+
+### ✅ Tests
+
+- Size the setup-overrides timeout for building a TypeScript program under load ([#106](https://github.com/AntelopeJS/interface-core/pull/106))
+
+### 🤖 CI
+
+- Run the checks and tests on Windows ([#93](https://github.com/AntelopeJS/interface-core/pull/93))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli
+
 ## v0.5.1
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.5.0...v0.5.1)
