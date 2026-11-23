@@ -42,9 +42,9 @@ describe("teardown under the destroyed module's own context", () => {
       { module: "playground", owner: "playground#1" },
       () => {
         const captured = captureModuleContext();
-        expect(captured).to.not.equal(undefined);
+        if (captured === undefined) throw new Error("no module context");
         unregisterRoute = (id) =>
-          runWithCapturedModuleContext(captured!, () => {
+          runWithCapturedModuleContext(captured, () => {
             routes.delete(id);
           });
         pages.register("/modules/demo/pages/contact");
@@ -62,17 +62,20 @@ describe("teardown under the destroyed module's own context", () => {
   });
 
   it("still invalidates the context once teardown is done", () => {
-    let captured: ReturnType<typeof captureModuleContext>;
+    const captures: NonNullable<ReturnType<typeof captureModuleContext>>[] = [];
     RunWithModuleContext({ module: "gone", owner: "gone#1" }, () => {
-      captured = captureModuleContext();
+      const context = captureModuleContext();
+      if (context !== undefined) captures.push(context);
     });
+    const [captured] = captures;
+    if (captured === undefined) throw new Error("no module context");
 
     RunWithModuleContext({ module: "gone", owner: "gone#1" }, () =>
       Events.ModuleDestroyed.emit("gone"),
     );
 
     expect(() =>
-      runWithCapturedModuleContext(captured!, () => undefined),
+      runWithCapturedModuleContext(captured, () => undefined),
     ).to.throw(/invalidated/);
   });
 });
