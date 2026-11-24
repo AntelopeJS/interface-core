@@ -350,8 +350,12 @@ export function GetInterfaceInstances(
   interfaceID: string,
 ): InterfaceConnection[] {
   const module = GetResponsibleModule();
-  if (!module || !(module in internal.interfaceConnections)) return [];
-  return internal.interfaceConnections[module][interfaceID] ?? [];
+  if (!module || !Object.hasOwn(internal.interfaceConnections, module))
+    return [];
+  const connections = internal.interfaceConnections[module];
+  return Object.hasOwn(connections, interfaceID)
+    ? connections[interfaceID]
+    : [];
 }
 
 /**
@@ -367,9 +371,10 @@ export function GetInterfaceInstance(
   connectionID: string,
 ): InterfaceConnection | undefined {
   const module = GetResponsibleModule();
-  if (!module || !(module in internal.interfaceConnections)) return;
+  if (!module || !Object.hasOwn(internal.interfaceConnections, module)) return;
   const connections = internal.interfaceConnections[module];
-  return (connections[interfaceID] ?? []).find(
+  if (!Object.hasOwn(connections, interfaceID)) return;
+  return connections[interfaceID].find(
     (connection) => connection.id === connectionID,
   );
 }
