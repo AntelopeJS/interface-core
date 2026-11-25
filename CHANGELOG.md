@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.5.3
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.5.2...v0.5.3)
+
+### 🩹 Fixes
+
+- Look up interface connections by own key only ([#111](https://github.com/AntelopeJS/interface-core/pull/111))
+
+### 🏡 Chore
+
+- Adopt tooling-configs 0.10 and satisfy the comment rule ([#110](https://github.com/AntelopeJS/interface-core/pull/110))
+
+### 🤖 CI
+
+- Re-sync the AntelopeJS pack for the release app ([#108](https://github.com/AntelopeJS/interface-core/pull/108))
+- Stop forwarding the retired RELEASE_GITHUB_TOKEN ([#109](https://github.com/AntelopeJS/interface-core/pull/109))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli
+
 ## v0.5.2
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.5.1...v0.5.2)
