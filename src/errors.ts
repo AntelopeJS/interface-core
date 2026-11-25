@@ -11,9 +11,9 @@ const MISSING_PROVIDER_MESSAGE =
  * Error emitted when a proxy is used without an attached provider in test
  * stub mode.
  *
- * The detection contract is the type and the stable `code` property, not the
- * message text: use `instanceof MissingProviderError` or, across duplicated
- * copies of this package, {@link isMissingProviderError}.
+ * The detection contract is the stable `code` property, not the message text:
+ * detect it with {@link isMissingProviderError}, which also holds across realms
+ * and duplicated copies of this package, where `instanceof` fails.
  */
 export class MissingProviderError extends Error {
   public readonly code = MISSING_PROVIDER_CODE;
@@ -24,7 +24,11 @@ export class MissingProviderError extends Error {
   }
 }
 
-/** Error emitted when a call cannot be routed between multiple providers. */
+/**
+ * Error emitted when a call cannot be routed between multiple providers.
+ *
+ * Detect it with {@link isAmbiguousProviderError}, not `instanceof`.
+ */
 export class AmbiguousProviderError extends Error {
   public readonly code = AMBIGUOUS_PROVIDER_CODE;
 
@@ -36,7 +40,11 @@ export class AmbiguousProviderError extends Error {
   }
 }
 
-/** Error emitted when an unattached async proxy has too many pending calls. */
+/**
+ * Error emitted when an unattached async proxy has too many pending calls.
+ *
+ * Detect it with {@link isProviderQueueFullError}, not `instanceof`.
+ */
 export class ProviderQueueFullError extends Error {
   public readonly code = PROVIDER_QUEUE_FULL_CODE;
 
@@ -50,6 +58,8 @@ export class ProviderQueueFullError extends Error {
 
 /**
  * Error emitted when work inherited ownership from a destroyed module.
+ *
+ * Detect it with {@link isModuleContextInvalidatedError}, not `instanceof`.
  */
 export class ModuleContextInvalidatedError extends Error {
   public readonly code = MODULE_CONTEXT_INVALIDATED_CODE;
@@ -85,4 +95,40 @@ export function isMissingProviderError(
   error: unknown,
 ): error is MissingProviderError {
   return isError(error) && error.code === MISSING_PROVIDER_CODE;
+}
+
+/**
+ * Type guard for {@link AmbiguousProviderError}.
+ *
+ * Checks the stable `code` property instead of `instanceof`, so detection
+ * survives realm boundaries and duplicated copies of this package.
+ */
+export function isAmbiguousProviderError(
+  error: unknown,
+): error is AmbiguousProviderError {
+  return isError(error) && error.code === AMBIGUOUS_PROVIDER_CODE;
+}
+
+/**
+ * Type guard for {@link ProviderQueueFullError}.
+ *
+ * Checks the stable `code` property instead of `instanceof`, so detection
+ * survives realm boundaries and duplicated copies of this package.
+ */
+export function isProviderQueueFullError(
+  error: unknown,
+): error is ProviderQueueFullError {
+  return isError(error) && error.code === PROVIDER_QUEUE_FULL_CODE;
+}
+
+/**
+ * Type guard for {@link ModuleContextInvalidatedError}.
+ *
+ * Checks the stable `code` property instead of `instanceof`, so detection
+ * survives realm boundaries and duplicated copies of this package.
+ */
+export function isModuleContextInvalidatedError(
+  error: unknown,
+): error is ModuleContextInvalidatedError {
+  return isError(error) && error.code === MODULE_CONTEXT_INVALIDATED_CODE;
 }

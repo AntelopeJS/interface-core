@@ -11,7 +11,7 @@ import {
   AsyncProxy,
   EventProxy,
   GetResponsibleModule,
-  ModuleContextInvalidatedError,
+  isModuleContextInvalidatedError,
   RegisteringProxy,
 } from "..";
 
@@ -106,7 +106,7 @@ describe("call chain: queued calls", () => {
     let served = 0;
     const pending = rejectionOf(
       inModule("a", "a#4", () => proxy.call()),
-      ModuleContextInvalidatedError,
+      isModuleContextInvalidatedError,
     );
 
     destroy("a", "a#4");
@@ -117,7 +117,7 @@ describe("call chain: queued calls", () => {
       }),
     );
 
-    expect(await pending).to.be.instanceOf(ModuleContextInvalidatedError);
+    expect(isModuleContextInvalidatedError(await pending)).to.equal(true);
     expect(served).to.equal(0);
   });
 });
@@ -361,13 +361,13 @@ describe("call chain: fence on a destroyed generation", () => {
     const gate = deferred();
     const outcome = inModule("a", "a#14", async () => {
       await gate.promise;
-      return rejectionOf(proxy.call(), ModuleContextInvalidatedError);
+      return rejectionOf(proxy.call(), isModuleContextInvalidatedError);
     });
 
     destroy("a", "a#14");
     gate.resolve();
 
-    expect(await outcome).to.be.instanceOf(ModuleContextInvalidatedError);
+    expect(isModuleContextInvalidatedError(await outcome)).to.equal(true);
   });
 
   it("throws on a register made from a destroyed generation", async () => {
@@ -382,7 +382,9 @@ describe("call chain: fence on a destroyed generation", () => {
     gate.resolve();
 
     expect(
-      await rejectionOf(outcome, ModuleContextInvalidatedError),
-    ).to.be.instanceOf(ModuleContextInvalidatedError);
+      isModuleContextInvalidatedError(
+        await rejectionOf(outcome, isModuleContextInvalidatedError),
+      ),
+    ).to.equal(true);
   });
 });

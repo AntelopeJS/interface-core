@@ -2,12 +2,13 @@ import { expect } from "chai";
 import { runInNewContext } from "node:vm";
 
 import { internal } from "../internal";
-import { rejectionOf } from "./rejection";
+import { isError, rejectionOf } from "./rejection";
 import {
   AsyncProxy,
   ImplementInterface,
   InterfaceFunction,
-  ModuleContextInvalidatedError,
+  isMissingProviderError,
+  isModuleContextInvalidatedError,
   RegisteringProxy,
   ReleaseOwner,
   RunWithModuleContext,
@@ -34,8 +35,8 @@ describe("ImplementInterface validation", () => {
     ).to.throw("implementation.second");
 
     internal.testStubMode = true;
-    const error = await rejectionOf(first.call(), Error);
-    expect(error).to.be.instanceOf(Error);
+    const error = await rejectionOf(first.call(), isError);
+    expect(isMissingProviderError(error)).to.equal(true);
   });
 
   it("keeps the current provider when a released owner fails to implement", async () => {
@@ -48,9 +49,9 @@ describe("ImplementInterface validation", () => {
 
     RunWithModuleContext({ module: "provider", owner: "provider#1" }, () => {
       ReleaseOwner("provider#1");
-      expect(() =>
-        ImplementInterface(declaration, { greet: () => "stale" }),
-      ).to.throw(ModuleContextInvalidatedError);
+      expect(() => ImplementInterface(declaration, { greet: () => "stale" }))
+        .to.throw()
+        .that.satisfies(isModuleContextInvalidatedError);
     });
 
     internal.testStubMode = true;

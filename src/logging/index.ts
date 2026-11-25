@@ -114,6 +114,40 @@ export namespace Logging {
     }
   }
 
+  interface ChannelProbe {
+    readonly channel?: unknown;
+    readonly Error?: unknown;
+    readonly Warn?: unknown;
+    readonly Info?: unknown;
+    readonly Debug?: unknown;
+    readonly Trace?: unknown;
+    readonly Write?: unknown;
+  }
+
+  function isChannelProbe(value: unknown): value is ChannelProbe {
+    return typeof value === "object" && value !== null;
+  }
+
+  /**
+   * Type guard for {@link Channel}.
+   *
+   * Checks the shape of the value (a string `channel` and every writer method)
+   * instead of `instanceof`, so a channel built by a duplicated copy of this
+   * package is still recognised.
+   */
+  export function isChannel(value: unknown): value is Channel {
+    return (
+      isChannelProbe(value) &&
+      typeof value.channel === "string" &&
+      typeof value.Error === "function" &&
+      typeof value.Warn === "function" &&
+      typeof value.Info === "function" &&
+      typeof value.Debug === "function" &&
+      typeof value.Trace === "function" &&
+      typeof value.Write === "function"
+    );
+  }
+
   const MainChannel = new Channel("main");
 
   /**
