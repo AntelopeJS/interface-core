@@ -2,6 +2,8 @@ import { expect } from "chai";
 
 import { Logging } from "../logging";
 
+const WRITERS = ["Error", "Warn", "Info", "Debug", "Trace", "Write"] as const;
+
 function foreignChannel(channel: string | number) {
   return {
     channel,
@@ -27,14 +29,18 @@ describe("Logging.isChannel", () => {
     expect(Logging.isChannel(foreignChannel(42))).to.equal(false);
   });
 
-  it("rejects an object whose writer method is missing or not a function", () => {
-    expect(
-      [
-        { ...foreignChannel("jobs"), Write: undefined },
-        { ...foreignChannel("jobs"), Trace: "trace" },
-      ].map((value) => Logging.isChannel(value)),
-    ).to.deep.equal([false, false]);
-  });
+  for (const writer of WRITERS) {
+    it(`rejects an object whose ${writer} is missing or not a function`, () => {
+      expect(
+        [undefined, writer].map((replacement) =>
+          Logging.isChannel({
+            ...foreignChannel("jobs"),
+            [writer]: replacement,
+          }),
+        ),
+      ).to.deep.equal([false, false]);
+    });
+  }
 
   it("rejects primitives and null", () => {
     expect(
