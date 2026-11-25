@@ -6,6 +6,7 @@ import { ReleaseOwner, RunWithModuleContext } from "../modules";
 import {
   ImplementInterface,
   InterfaceFunction,
+  isMissingProviderError,
   MissingProviderError,
   RegisteringProxy,
 } from "..";
@@ -195,7 +196,7 @@ async function observe(probes: Probe[]): Promise<Observation[]> {
       try {
         return await probe.call();
       } catch (error) {
-        if (error instanceof MissingProviderError) {
+        if (isMissingProviderError(error)) {
           return MissingProviderError;
         }
         throw error;

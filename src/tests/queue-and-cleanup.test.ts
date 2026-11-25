@@ -6,7 +6,7 @@ import { rejectionOf } from "./rejection";
 import {
   AsyncProxy,
   EventProxy,
-  ProviderQueueFullError,
+  isProviderQueueFullError,
   RegisteringProxy,
 } from "..";
 
@@ -29,8 +29,8 @@ describe("bounded queues and resilient cleanup", () => {
     const first = proxy.call(1);
     const second = proxy.call(2);
 
-    const error = await rejectionOf(proxy.call(3), ProviderQueueFullError);
-    expect(error).to.be.instanceOf(ProviderQueueFullError);
+    const error = await rejectionOf(proxy.call(3), isProviderQueueFullError);
+    expect(isProviderQueueFullError(error)).to.equal(true);
     proxy.onCall((value) => value * 2, true);
 
     expect(await Promise.all([first, second])).to.deep.equal([2, 4]);

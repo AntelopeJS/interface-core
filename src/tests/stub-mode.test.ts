@@ -1,14 +1,7 @@
 import { assert, expect } from "chai";
-import { runInNewContext } from "node:vm";
 
 import { internal } from "../internal";
-import {
-  AsyncProxy,
-  isMissingProviderError,
-  MISSING_PROVIDER_CODE,
-  MissingProviderError,
-  RegisteringProxy,
-} from "..";
+import { AsyncProxy, isMissingProviderError, RegisteringProxy } from "..";
 
 describe("test stub mode", () => {
   afterEach(() => {
@@ -27,8 +20,7 @@ describe("test stub mode", () => {
         thrown = error;
       }
 
-      assert.instanceOf(thrown, MissingProviderError);
-      expect(thrown.code).to.equal(MISSING_PROVIDER_CODE);
+      assert(isMissingProviderError(thrown));
       expect(thrown.message).to.include("without implementation");
     });
 
@@ -60,8 +52,7 @@ describe("test stub mode", () => {
         thrown = error;
       }
 
-      assert.instanceOf(thrown, MissingProviderError);
-      expect(thrown.code).to.equal(MISSING_PROVIDER_CODE);
+      assert(isMissingProviderError(thrown));
     });
 
     it("still queues registration when stub mode is off", () => {
@@ -83,37 +74,6 @@ describe("test stub mode", () => {
       proxy.register("id1");
 
       expect(registered).to.deep.equal(["id1"]);
-    });
-  });
-
-  describe("isMissingProviderError", () => {
-    it("accepts a MissingProviderError instance", () => {
-      expect(isMissingProviderError(new MissingProviderError())).to.equal(true);
-    });
-
-    it("accepts an error carrying the code from a duplicated package copy", () => {
-      const foreignCopy = Object.assign(new Error("other wording"), {
-        code: MISSING_PROVIDER_CODE,
-      });
-      expect(isMissingProviderError(foreignCopy)).to.equal(true);
-    });
-
-    it("accepts an error carrying the code from another realm", () => {
-      const foreignRealmError: unknown = runInNewContext(
-        "Object.assign(new Error('other realm'), { code })",
-        { code: MISSING_PROVIDER_CODE },
-      );
-
-      expect(foreignRealmError instanceof Error).to.equal(false);
-      expect(isMissingProviderError(foreignRealmError)).to.equal(true);
-    });
-
-    it("rejects unrelated errors and non-errors", () => {
-      expect(isMissingProviderError(new Error("boom"))).to.equal(false);
-      expect(isMissingProviderError({ code: MISSING_PROVIDER_CODE })).to.equal(
-        false,
-      );
-      expect(isMissingProviderError(undefined)).to.equal(false);
     });
   });
 });

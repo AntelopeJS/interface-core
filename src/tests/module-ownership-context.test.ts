@@ -1,13 +1,13 @@
 import { expect } from "chai";
 
 import { internal } from "../internal";
-import { MissingProviderError } from "../errors";
+import { isMissingProviderError } from "../errors";
 import { Events, RunWithModuleContext } from "../modules";
 import {
   AsyncProxy,
   EventProxy,
   GetResponsibleModule,
-  ModuleContextInvalidatedError,
+  isModuleContextInvalidatedError,
   RegisteringProxy,
   RunWithResponsibleModule,
 } from "..";
@@ -126,7 +126,7 @@ describe("explicit module ownership", () => {
     const error = await registration;
     events.emit();
 
-    expect(error).to.be.instanceOf(ModuleContextInvalidatedError);
+    expect(isModuleContextInvalidatedError(error)).to.equal(true);
     expect(calls).to.equal(0);
   });
 
@@ -146,7 +146,7 @@ describe("explicit module ownership", () => {
     const oldError = await oldRegistration;
     events.emit("event");
 
-    expect(oldError).to.be.instanceOf(ModuleContextInvalidatedError);
+    expect(isModuleContextInvalidatedError(oldError)).to.equal(true);
     expect(calls).to.deep.equal(["new"]);
   });
 });
@@ -165,8 +165,8 @@ describe("explicit module ownership of concurrent and nested work", () => {
 
     Events.ModuleDestroyed.emit("concurrent-module");
 
-    expect(await first).to.be.instanceOf(ModuleContextInvalidatedError);
-    expect(await second).to.be.instanceOf(ModuleContextInvalidatedError);
+    expect(isModuleContextInvalidatedError(await first)).to.equal(true);
+    expect(isModuleContextInvalidatedError(await second)).to.equal(true);
   });
 
   it("invalidates only the destroyed nested context", async () => {
@@ -183,7 +183,7 @@ describe("explicit module ownership of concurrent and nested work", () => {
     });
 
     Events.ModuleDestroyed.emit("outer-module");
-    expect(await outer).to.be.instanceOf(ModuleContextInvalidatedError);
+    expect(isModuleContextInvalidatedError(await outer)).to.equal(true);
     expect(await inner).to.equal(undefined);
     events.emit();
     expect(calls).to.deep.equal(["inner"]);
@@ -200,8 +200,8 @@ describe("explicit module ownership of concurrent and nested work", () => {
       proxy.onCall(() => "reloaded"),
     );
 
-    expect(await staleAttachment).to.be.instanceOf(
-      ModuleContextInvalidatedError,
+    expect(isModuleContextInvalidatedError(await staleAttachment)).to.equal(
+      true,
     );
     expect(await proxy.call()).to.equal("reloaded");
   });
@@ -226,8 +226,8 @@ describe("explicit module ownership of concurrent and nested work", () => {
 
     Events.ModuleDestroyed.emit("routed-module");
 
-    expect(await staleAttachment).to.be.instanceOf(
-      ModuleContextInvalidatedError,
+    expect(isModuleContextInvalidatedError(await staleAttachment)).to.equal(
+      true,
     );
   });
 });
@@ -260,7 +260,7 @@ describe("explicit module ownership of providers", () => {
     } catch (error) {
       rejection = error;
     }
-    expect(rejection).to.be.instanceOf(MissingProviderError);
+    expect(isMissingProviderError(rejection)).to.equal(true);
   });
 
   it("cleans handlers and preserves replay attribution", () => {

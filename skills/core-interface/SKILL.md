@@ -138,6 +138,10 @@ ch.Debug("query", { ms: 12 });
   calls queue indefinitely (no timeout); an `await` before any provider attaches simply waits. In
   `ajs module test` stub mode they reject instead with "Interface function called without
   implementation in test environment. Ensure the required module is loaded in your test config.".
+- Detect the package's errors and channels with their guards, never `instanceof`, which is false
+  for a value built by another copy of the package: `isMissingProviderError`,
+  `isAmbiguousProviderError`, `isProviderQueueFullError`, `isModuleContextInvalidatedError` (root
+  export, matching on `code`) and `Logging.isChannel`.
 - Prefer the synchronous `ImplementInterface(decl, impl)`; the Promise-accepting overload is
   deprecated. `InterfaceToImpl` marks every key optional, but handlers are still validated at run
   time: every declared async proxy needs a function and every registering proxy needs both

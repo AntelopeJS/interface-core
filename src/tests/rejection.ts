@@ -1,16 +1,21 @@
 import { expect } from "chai";
 
-/** Awaits a promise that must reject with an instance of `kind` and returns that rejection. */
-export async function rejectionOf<E extends Error>(
+/** Whether the value is an `Error`. */
+export function isError(value: unknown): value is Error {
+  return value instanceof Error;
+}
+
+/** Awaits a promise that must reject with a value `isExpected` accepts and returns that rejection. */
+export async function rejectionOf<E>(
   promise: PromiseLike<unknown>,
-  kind: new (...args: never[]) => E,
+  isExpected: (reason: unknown) => reason is E,
 ): Promise<E> {
   const [settled] = await Promise.allSettled([promise]);
   if (settled.status === "fulfilled") {
-    expect.fail(`expected a rejection with ${kind.name}`);
+    expect.fail(`expected a rejection accepted by ${isExpected.name}`);
   }
-  if (settled.reason instanceof kind) {
+  if (isExpected(settled.reason)) {
     return settled.reason;
   }
-  return expect.fail(`expected a rejection with ${kind.name}`);
+  return expect.fail(`expected a rejection accepted by ${isExpected.name}`);
 }
