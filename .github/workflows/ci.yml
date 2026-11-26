@@ -30,6 +30,7 @@ jobs:
       test-job: true
       affected-tests: true
       nightly: ${{ inputs.nightly == true }}
+      extra-commands: exit 1
     permissions:
       contents: read
   renovate-sync:
