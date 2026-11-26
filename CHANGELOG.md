@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.5.4
+
+[compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.5.3...v0.5.4)
+
+### 🚀 Enhancements
+
+- Add brand guards for the package errors and Logging.Channel ([#114](https://github.com/AntelopeJS/interface-core/pull/114))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli
+
 ## v0.5.3
 
 [compare changes](https://github.com/AntelopeJS/interface-core/compare/v0.5.2...v0.5.3)
